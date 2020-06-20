@@ -21,3 +21,5 @@ Other features:
 * flashing cursor
 
 * ascii-art easter eggs
+
+* saved history of text and responses
