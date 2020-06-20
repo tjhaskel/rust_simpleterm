@@ -1,0 +1,23 @@
+simple fake terminal
+
+
+it can:
+
+1. display text, typing it out one character at a time and respecting newlines
+
+2. prompt the user to continue (hit enter)
+
+3. prompt the user for input (strings or numbers)
+
+
+Other features:
+
+* pretty interface
+
+* colored text
+
+* sound effects (optional)
+
+* flashing cursor
+
+* ascii-art easter eggs
