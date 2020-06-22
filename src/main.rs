@@ -19,6 +19,14 @@ fn main() {
     let mut marker: usize = 1;
 
     while let Some(e) = window.next() {
+        if let Event::Input(input, _) = e.clone() {
+            if let Input::Button(button_args) = input {
+                if let Button::Keyboard(key) = button_args.button {
+                    println!("Key event: {:?} {:?}", key, button_args.state);
+                }
+            }
+        }
+
         window.draw_2d(&e, |c, g, device| {
             let transform = c.transform.trans(10.0, 30.0);
 
