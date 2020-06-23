@@ -18,21 +18,33 @@ fn main() {
     let end: usize = text.len();
     let mut marker: usize = 1;
 
+    let mut input_string: String = String::default();
+
     while let Some(e) = window.next() {
-        if let Event::Input(input, _) = e.clone() {
-            if let Input::Button(button_args) = input {
-                if let Button::Keyboard(key) = button_args.button {
-                    println!("Key event: {:?} {:?}", key, button_args.state);
+        e.text(|text| input_string.push_str(text));
+        e.button(|button_args| {
+            if let Button::Keyboard(key) = button_args.button {
+                if button_args.state == ButtonState::Press {
+                    if key == Key::Backspace { input_string.pop(); }
+                    if key == Key::Return { input_string = String::default(); }
                 }
             }
-        }
+        });
 
         window.draw_2d(&e, |c, g, device| {
-            let transform = c.transform.trans(10.0, 30.0);
+            let mut transform = c.transform.trans(10.0, 30.0);
 
             clear([0.0, 0.0, 0.0, 1.0], g);
             text::Text::new_color([0.0, 1.0, 0.0, 1.0], 32).draw(
                 &text[..marker],
+                &mut glyphs,
+                &c.draw_state,
+                transform, g
+            ).unwrap();
+
+            transform = c.transform.trans(10.0, 300.0);
+            text::Text::new_color([0.0, 1.0, 0.0, 1.0], 32).draw(
+                &input_string[..],
                 &mut glyphs,
                 &c.draw_state,
                 transform, g
