@@ -1,20 +1,27 @@
 use piston_window::*;
 use std::path::Path;
-use std::{thread, time};
+use std::{thread, time::Duration};
+
+const TYPE_TIME: Duration = Duration::from_millis(30);
+const MESSAGE_LOC: (f64, f64) = (10.0, 30.0);
+const INPUT_LOC: (f64, f64) = (10.0, 580.0);
 
 pub struct Terminal {
     window: PistonWindow,
+    glyphs: Glyphs,
     message: String,
     input: String,
 }
 
 impl Terminal {
     pub fn new(title: &str) -> Terminal {
+        let mut new_window: PistonWindow = WindowSettings::new(title, [800, 600]).exit_on_esc(true).build().unwrap();
+        let resources: &Path = Path::new("resources");
+        let loaded_glyphs = new_window.load_font(resources.join("LeagueSpartan-Regular.ttf")).unwrap();
+
         Terminal {
-            window: WindowSettings::new(title, [800, 600])
-                    .exit_on_esc(true)
-                    .build()
-                    .unwrap(),
+            window: new_window,
+            glyphs: loaded_glyphs,
             message: String::default(),
             input: String::default(),
         }
@@ -42,9 +49,8 @@ impl Terminal {
     }
 
     fn write_message(&mut self) {
-        let resources: &Path = Path::new("resources");
-        let mut glyphs = self.window.load_font(resources.join("LeagueSpartan-Regular.ttf")).unwrap();
         let current_input: &str = &(self.input[..]);
+        let glyphs = &mut self.glyphs;
 
         let message_len: usize = self.message.len();
         for i in 1..message_len {
@@ -55,21 +61,21 @@ impl Terminal {
 
                     text::Text::new_color([0.0, 1.0, 0.0, 1.0], 32).draw(
                         new_message,
-                        &mut glyphs,
+                        glyphs,
                         &c.draw_state,
-                        c.transform.trans(10.0, 30.0), g
+                        c.transform.trans(MESSAGE_LOC.0, MESSAGE_LOC.1), g
                     ).unwrap();
                 
                     text::Text::new_color([0.0, 1.0, 0.0, 1.0], 32).draw(
                         current_input,
-                        &mut glyphs,
+                        glyphs,
                         &c.draw_state,
-                        c.transform.trans(10.0, 300.0), g
+                        c.transform.trans(INPUT_LOC.0, INPUT_LOC.1), g
                     ).unwrap();
                 
                     glyphs.factory.encoder.flush(device);
                 });
-                thread::sleep(time::Duration::from_millis(20));
+                thread::sleep(TYPE_TIME);
             }
         }
     }
@@ -77,10 +83,9 @@ impl Terminal {
     fn wait_for_continue(&mut self) {
         let mut ready: bool = false;
 
-        let resources: &Path = Path::new("resources");
-        let mut glyphs = self.window.load_font(resources.join("LeagueSpartan-Regular.ttf")).unwrap();
         let current_message: &str = &(self.message);
         let current_input: &str = &(self.input);
+        let glyphs = &mut self.glyphs;
         
         while let Some(e) = self.window.next() {
             e.button(|button_args| {
@@ -98,16 +103,16 @@ impl Terminal {
 
                 text::Text::new_color([0.0, 1.0, 0.0, 1.0], 32).draw(
                     current_message,
-                    &mut glyphs,
+                    glyphs,
                     &c.draw_state,
-                    c.transform.trans(10.0, 30.0), g
+                    c.transform.trans(MESSAGE_LOC.0, MESSAGE_LOC.1), g
                 ).unwrap();
             
                 text::Text::new_color([0.0, 1.0, 0.0, 1.0], 32).draw(
                     current_input,
-                    &mut glyphs,
+                    glyphs,
                     &c.draw_state,
-                    c.transform.trans(10.0, 300.0), g
+                    c.transform.trans(INPUT_LOC.0, INPUT_LOC.1), g
                 ).unwrap();
             
                 // Update glyphs before rendering.
@@ -120,9 +125,8 @@ impl Terminal {
         let mut input_string: String = String::default();
         let mut input_accepted: bool = false;
 
-        let resources: &Path = Path::new("resources");
-        let mut glyphs = self.window.load_font(resources.join("LeagueSpartan-Regular.ttf")).unwrap();
         let current_message: &str = &(self.message);
+        let glyphs = &mut self.glyphs;
         
         while let Some(e) = self.window.next() {
             e.text(|text| input_string.push_str(text));
@@ -145,16 +149,16 @@ impl Terminal {
 
                 text::Text::new_color([0.0, 1.0, 0.0, 1.0], 32).draw(
                     current_message,
-                    &mut glyphs,
+                    glyphs,
                     &c.draw_state,
-                    c.transform.trans(10.0, 30.0), g
+                    c.transform.trans(MESSAGE_LOC.0, MESSAGE_LOC.1), g
                 ).unwrap();
             
                 text::Text::new_color([0.0, 1.0, 0.0, 1.0], 32).draw(
                     &input_string[..],
-                    &mut glyphs,
+                    glyphs,
                     &c.draw_state,
-                    c.transform.trans(10.0, 300.0), g
+                    c.transform.trans(INPUT_LOC.0, INPUT_LOC.1), g
                 ).unwrap();
             
                 // Update glyphs before rendering.
