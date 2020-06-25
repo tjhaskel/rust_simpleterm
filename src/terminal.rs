@@ -9,7 +9,7 @@ const INPUT_LOC: (f64, f64) = (10.0, 580.0);
 pub struct Terminal {
     window: PistonWindow,
     glyphs: Glyphs,
-    message: String,
+    message: Vec<String>,
     input: String,
 }
 
@@ -22,7 +22,7 @@ impl Terminal {
         Terminal {
             window: new_window,
             glyphs: loaded_glyphs,
-            message: String::default(),
+            message: Vec::new(),
             input: String::default(),
         }
     }
@@ -40,42 +40,37 @@ impl Terminal {
     }
 
     fn new_message(&mut self, message: &str) {
-        self.message = String::from(message);
-        self.write_message();
+        self.message = message.split("\n").map(|x| String::from(x)).collect();
+        self.type_message();
     }
 
     fn get_input(&self) -> String {
         self.input.clone()
     }
 
-    fn write_message(&mut self) {
+    fn type_message(&mut self) {
         let current_input: &str = &(self.input[..]);
         let glyphs = &mut self.glyphs;
 
-        let message_len: usize = self.message.len();
-        for i in 1..message_len {
-            let new_message: &str = &(self.message[..i]);
-            if let Some(e) = self.window.next() {
-                self.window.draw_2d(&e, |c, g, device| {
-                    clear([0.0, 0.0, 0.0, 1.0], g);
+        let mut typed_message: Vec<String> = Vec::new();
 
-                    text::Text::new_color([0.0, 1.0, 0.0, 1.0], 32).draw(
-                        new_message,
-                        glyphs,
-                        &c.draw_state,
-                        c.transform.trans(MESSAGE_LOC.0, MESSAGE_LOC.1), g
-                    ).unwrap();
-                
-                    text::Text::new_color([0.0, 1.0, 0.0, 1.0], 32).draw(
-                        current_input,
-                        glyphs,
-                        &c.draw_state,
-                        c.transform.trans(INPUT_LOC.0, INPUT_LOC.1), g
-                    ).unwrap();
-                
-                    glyphs.factory.encoder.flush(device);
-                });
-                thread::sleep(TYPE_TIME);
+        for (i, line) in self.message.iter().enumerate() {
+            typed_message.push(String::default());
+
+            let line_len: usize = line.len();
+            for j in 1..line_len {
+                typed_message[i] = String::from(&line[..j]);
+                if let Some(e) = self.window.next() {
+                    self.window.draw_2d(&e, |c, g, device| {
+                        clear([0.0, 0.0, 0.0, 1.0], g);
+
+                        display_message(&typed_message, glyphs, c, g);
+                        display_input(current_input, glyphs, c, g);
+                    
+                        glyphs.factory.encoder.flush(device);
+                    });
+                    thread::sleep(TYPE_TIME);
+                }
             }
         }
     }
@@ -83,9 +78,9 @@ impl Terminal {
     fn wait_for_continue(&mut self) {
         let mut ready: bool = false;
 
-        let current_message: &str = &(self.message);
+        let message: &Vec<String> = &self.message;
         let current_input: &str = &(self.input);
-        let glyphs = &mut self.glyphs;
+        let glyphs: &mut Glyphs = &mut self.glyphs;
         
         while let Some(e) = self.window.next() {
             e.button(|button_args| {
@@ -101,21 +96,9 @@ impl Terminal {
             self.window.draw_2d(&e, |c, g, device| {
                 clear([0.0, 0.0, 0.0, 1.0], g);
 
-                text::Text::new_color([0.0, 1.0, 0.0, 1.0], 32).draw(
-                    current_message,
-                    glyphs,
-                    &c.draw_state,
-                    c.transform.trans(MESSAGE_LOC.0, MESSAGE_LOC.1), g
-                ).unwrap();
+                display_message(message, glyphs, c, g);
+                display_input(current_input, glyphs, c, g);
             
-                text::Text::new_color([0.0, 1.0, 0.0, 1.0], 32).draw(
-                    current_input,
-                    glyphs,
-                    &c.draw_state,
-                    c.transform.trans(INPUT_LOC.0, INPUT_LOC.1), g
-                ).unwrap();
-            
-                // Update glyphs before rendering.
                 glyphs.factory.encoder.flush(device);
             });
         }
@@ -125,8 +108,8 @@ impl Terminal {
         let mut input_string: String = String::default();
         let mut input_accepted: bool = false;
 
-        let current_message: &str = &(self.message);
-        let glyphs = &mut self.glyphs;
+        let message: &Vec<String> = &self.message;
+        let glyphs: &mut Glyphs = &mut self.glyphs;
         
         while let Some(e) = self.window.next() {
             e.text(|text| input_string.push_str(text));
@@ -147,25 +130,38 @@ impl Terminal {
             self.window.draw_2d(&e, |c, g, device| {
                 clear([0.0, 0.0, 0.0, 1.0], g);
 
-                text::Text::new_color([0.0, 1.0, 0.0, 1.0], 32).draw(
-                    current_message,
-                    glyphs,
-                    &c.draw_state,
-                    c.transform.trans(MESSAGE_LOC.0, MESSAGE_LOC.1), g
-                ).unwrap();
+                display_message(message, glyphs, c, g);
+                display_input(&input_string[..], glyphs, c, g);
             
-                text::Text::new_color([0.0, 1.0, 0.0, 1.0], 32).draw(
-                    &input_string[..],
-                    glyphs,
-                    &c.draw_state,
-                    c.transform.trans(INPUT_LOC.0, INPUT_LOC.1), g
-                ).unwrap();
-            
-                // Update glyphs before rendering.
                 glyphs.factory.encoder.flush(device);
             });
 
             if input_accepted { break; }
         }
     }
+}
+
+fn display_message(message: &Vec<String>, glyphs: &mut Glyphs, context: Context, graphics: &mut G2d)  {
+    let mut y_offset: f64 = 0.0;
+    for line in message.iter() {
+        text::Text::new_color([0.0, 1.0, 0.0, 1.0], 32).draw(
+            line,
+            glyphs,
+            &context.draw_state,
+            context.transform.trans(MESSAGE_LOC.0, MESSAGE_LOC.1 + y_offset),
+            graphics,
+        ).unwrap();
+
+        y_offset += 30.0;
+    }
+}
+
+fn display_input(message: &str, glyphs: &mut Glyphs, context: Context, graphics: &mut G2d)  {
+    text::Text::new_color([0.0, 1.0, 0.0, 1.0], 32).draw(
+        message,
+        glyphs,
+        &context.draw_state,
+        context.transform.trans(INPUT_LOC.0, INPUT_LOC.1),
+        graphics,
+    ).unwrap();
 }
