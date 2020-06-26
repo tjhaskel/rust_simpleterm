@@ -2,6 +2,8 @@ use piston_window::{*, types::Color};
 use std::path::Path;
 use std::{thread, time::Duration};
 
+use crate::color::TermColor;
+
 const TYPE_TIME: Duration = Duration::from_millis(30);
 const TEXT_OFFSET: (f64, f64) = (25.0, 50.0);
 
@@ -208,7 +210,7 @@ fn display_input(win_size: Size, message: &str, glyphs: &mut Glyphs, fgc: Color,
 }
 
 fn display_filter(win_size: Size, bgc: Color, fgc: Color, context: Context, graphics: &mut G2d) {
-    let line_color: Color = if color_brighter(fgc, bgc) {
+    let line_color: Color = if fgc.brighter_than(bgc) {
         [bgc[0] - 0.2, bgc[1] - 0.2, bgc[2] - 0.2, 0.5]
     } else {
         [bgc[0] + 0.15, bgc[1] + 0.15, bgc[2] + 0.15, 0.4]
@@ -222,17 +224,4 @@ fn display_filter(win_size: Size, bgc: Color, fgc: Color, context: Context, grap
     rectangle(bgc, [0.0, 0.0, 10.0, win_size.height], context.transform, graphics);
     rectangle(bgc, [win_size.width - 10.0, 0.0, 10.0, win_size.height], context.transform, graphics);
     rectangle(bgc, [0.0, win_size.height - 10.0, win_size.width, 10.0], context.transform, graphics);
-}
-
-fn color_brighter(a: Color, b: Color) -> bool {
-    brightness(a) > brightness(b)
-}
-
-fn brightness(c: Color) -> f32 {
-    let weighted_add: f32 =
-        (c[0] * c[0] * 0.241) +
-        (c[1] * c[1] * 0.691) +
-        (c[2] * c[2] * 0.068);
-
-    weighted_add.sqrt() * c[3]
 }
