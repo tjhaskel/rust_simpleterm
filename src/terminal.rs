@@ -81,7 +81,7 @@ impl Terminal {
                         display_box(win_size, bgc, fgc, c, g);
                         display_message(&typed_message, glyphs, fgc, c, g);
                         display_input(win_size, current_input, glyphs, fgc, c, g);
-                        if use_filter { display_filter(win_size, true, c, g); }
+                        if use_filter { display_filter(win_size, true, bgc, fgc, c, g); }
                     
                         glyphs.factory.encoder.flush(device);
                     });
@@ -120,7 +120,7 @@ impl Terminal {
                 display_box(win_size, bgc, fgc, c, g);
                 display_message(message, glyphs, fgc, c, g);
                 display_input(win_size, current_input, glyphs, fgc, c, g);
-                if use_filter { display_filter(win_size, true, c, g); }
+                if use_filter { display_filter(win_size, true, bgc, fgc, c, g); }
             
                 glyphs.factory.encoder.flush(device);
             });
@@ -161,7 +161,7 @@ impl Terminal {
                 display_box(win_size, bgc, fgc, c, g);
                 display_message(message, glyphs, fgc, c, g);
                 display_input(win_size, &input_string[..], glyphs, fgc, c, g);
-                if use_filter { display_filter(win_size, true, c, g); }
+                if use_filter { display_filter(win_size, true, bgc, fgc, c, g); }
             
                 glyphs.factory.encoder.flush(device);
             });
@@ -207,14 +207,34 @@ fn display_input(win_size: Size, message: &str, glyphs: &mut Glyphs, fgc: Color,
     ).unwrap();
 }
 
-fn display_filter(win_size: Size, contain_box: bool, context: Context, graphics: &mut G2d) {
+fn display_filter(win_size: Size, contain_box: bool, bgc: Color, fgc: Color, context: Context, graphics: &mut G2d) {
+    let mut line_color: Color = [bgc[0] - 0.2, bgc[1] - 0.2, bgc[2] - 0.2, 0.5];
+    if color_brighter(fgc, bgc) {
+        line_color = [line_color[0] - 0.2, line_color[1] - 0.2, line_color[2] - 0.2, 0.5];
+    } else {
+        line_color = [line_color[0] + 0.15, line_color[1] + 0.15, line_color[2] + 0.15, 0.4];
+    }
+    
     if contain_box {
         for i in 0..((win_size.height - 30.0) as i32 / 5) {
-            rectangle([0.0, 0.0, 0.0, 0.5], [15.0, (i * 5) as f64 + 15.0, win_size.width - 30.0, 3.0], context.transform, graphics);
+            rectangle(line_color, [15.0, (i * 5) as f64 + 15.0, win_size.width - 30.0, 2.0], context.transform, graphics);
         }
     } else {
         for i in 0..(win_size.height as i32 / 5) {
-            rectangle([0.0, 0.0, 0.0, 0.5], [0.0, (i * 5) as f64, win_size.width, 3.0], context.transform, graphics);
+            rectangle(line_color, [0.0, (i * 5) as f64, win_size.width, 2.0], context.transform, graphics);
         }
     }
+}
+
+fn color_brighter(a: Color, b: Color) -> bool {
+    brightness(a) > brightness(b)
+}
+
+fn brightness(c: Color) -> f32 {
+    let weighted_add: f32 =
+        (c[0] * c[0] * 0.241) +
+        (c[1] * c[1] * 0.691) +
+        (c[2] * c[2] * 0.068);
+
+    weighted_add.sqrt() * c[3]
 }
