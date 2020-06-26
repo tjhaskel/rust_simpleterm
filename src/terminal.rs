@@ -12,13 +12,14 @@ pub struct Terminal {
     glyphs: Glyphs,
     message: Vec<String>,
     input: String,
+    scanlines: bool,
 }
 
 impl Terminal {
-    pub fn new(title: &str, bg: Color, fg: Color) -> Terminal {
+    pub fn new(title: &str, bg: Color, fg: Color, font: &str) -> Terminal {
         let mut new_window: PistonWindow = WindowSettings::new(title, [800, 600]).exit_on_esc(true).build().unwrap();
         let resources: &Path = Path::new("resources");
-        let loaded_glyphs = new_window.load_font(resources.join("LeagueSpartan-Regular.ttf")).unwrap();
+        let loaded_glyphs = new_window.load_font(resources.join(font)).unwrap();
 
         Terminal {
             window: new_window,
@@ -27,7 +28,12 @@ impl Terminal {
             glyphs: loaded_glyphs,
             message: Vec::new(),
             input: String::default(),
+            scanlines: true,
         }
+    }
+
+    pub fn scan_lines(&mut self, enabled: bool) {
+        self.scanlines = enabled;
     }
 
     pub fn tell(&mut self, message: &str) {
@@ -58,8 +64,7 @@ impl Terminal {
         let glyphs = &mut self.glyphs;
 
         let mut typed_message: Vec<String> = Vec::new();
-
-        let win_size: Size = self.window.window.size();
+        let use_filter: bool = self.scanlines;
 
         for (i, line) in self.message.iter().enumerate() {
             typed_message.push(String::default());
@@ -68,13 +73,15 @@ impl Terminal {
             for j in 1..line_len {
                 typed_message[i] = String::from(&line[..=j]);
                 if let Some(e) = self.window.next() {
+                    let win_size: Size = self.window.window.size();
+
                     self.window.draw_2d(&e, |c, g, device| {
                         clear(bgc, g);
 
                         display_box(win_size, bgc, fgc, c, g);
                         display_message(&typed_message, glyphs, fgc, c, g);
                         display_input(win_size, current_input, glyphs, fgc, c, g);
-                        display_filter(win_size, c, g);
+                        if use_filter { display_filter(win_size, true, c, g); }
                     
                         glyphs.factory.encoder.flush(device);
                     });
@@ -92,10 +99,11 @@ impl Terminal {
         let message: &Vec<String> = &self.message;
         let current_input: &str = &(self.input);
         let glyphs: &mut Glyphs = &mut self.glyphs;
-
-        let win_size: Size = self.window.window.size();
+        let use_filter: bool = self.scanlines;
         
         while let Some(e) = self.window.next() {
+            let win_size: Size = self.window.window.size();
+
             e.button(|button_args| {
                 if let Button::Keyboard(key) = button_args.button {
                     if button_args.state == ButtonState::Press {
@@ -112,7 +120,7 @@ impl Terminal {
                 display_box(win_size, bgc, fgc, c, g);
                 display_message(message, glyphs, fgc, c, g);
                 display_input(win_size, current_input, glyphs, fgc, c, g);
-                display_filter(win_size, c, g);
+                if use_filter { display_filter(win_size, true, c, g); }
             
                 glyphs.factory.encoder.flush(device);
             });
@@ -127,10 +135,11 @@ impl Terminal {
         let fgc: Color = self.fg_color;
         let message: &Vec<String> = &self.message;
         let glyphs: &mut Glyphs = &mut self.glyphs;
-
-        let win_size: Size = self.window.window.size();
+        let use_filter: bool = self.scanlines;
         
         while let Some(e) = self.window.next() {
+            let win_size: Size = self.window.window.size();
+
             e.text(|text| input_string.push_str(text));
             e.button(|button_args| {
                 if let Button::Keyboard(key) = button_args.button {
@@ -152,7 +161,7 @@ impl Terminal {
                 display_box(win_size, bgc, fgc, c, g);
                 display_message(message, glyphs, fgc, c, g);
                 display_input(win_size, &input_string[..], glyphs, fgc, c, g);
-                display_filter(win_size, c, g);
+                if use_filter { display_filter(win_size, true, c, g); }
             
                 glyphs.factory.encoder.flush(device);
             });
@@ -198,8 +207,14 @@ fn display_input(win_size: Size, message: &str, glyphs: &mut Glyphs, fgc: Color,
     ).unwrap();
 }
 
-fn display_filter(win_size: Size, context: Context, graphics: &mut G2d) {
-    for i in 0..(win_size.height as i32 / 5) {
-        rectangle([0.0, 0.0, 0.0, 0.5], [0.0, (i * 5) as f64, win_size.width, 3.0], context.transform, graphics);
+fn display_filter(win_size: Size, contain_box: bool, context: Context, graphics: &mut G2d) {
+    if contain_box {
+        for i in 0..((win_size.height - 30.0) as i32 / 5) {
+            rectangle([0.0, 0.0, 0.0, 0.5], [15.0, (i * 5) as f64 + 15.0, win_size.width - 30.0, 3.0], context.transform, graphics);
+        }
+    } else {
+        for i in 0..(win_size.height as i32 / 5) {
+            rectangle([0.0, 0.0, 0.0, 0.5], [0.0, (i * 5) as f64, win_size.width, 3.0], context.transform, graphics);
+        }
     }
 }
