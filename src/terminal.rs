@@ -81,7 +81,7 @@ impl Terminal {
                         display_box(win_size, bgc, fgc, c, g);
                         display_message(&typed_message, glyphs, fgc, c, g);
                         display_input(win_size, current_input, glyphs, fgc, c, g);
-                        if use_filter { display_filter(win_size, true, bgc, fgc, c, g); }
+                        if use_filter { display_filter(win_size, bgc, fgc, c, g); }
                     
                         glyphs.factory.encoder.flush(device);
                     });
@@ -120,7 +120,7 @@ impl Terminal {
                 display_box(win_size, bgc, fgc, c, g);
                 display_message(message, glyphs, fgc, c, g);
                 display_input(win_size, current_input, glyphs, fgc, c, g);
-                if use_filter { display_filter(win_size, true, bgc, fgc, c, g); }
+                if use_filter { display_filter(win_size, bgc, fgc, c, g); }
             
                 glyphs.factory.encoder.flush(device);
             });
@@ -161,7 +161,7 @@ impl Terminal {
                 display_box(win_size, bgc, fgc, c, g);
                 display_message(message, glyphs, fgc, c, g);
                 display_input(win_size, &input_string[..], glyphs, fgc, c, g);
-                if use_filter { display_filter(win_size, true, bgc, fgc, c, g); }
+                if use_filter { display_filter(win_size, bgc, fgc, c, g); }
             
                 glyphs.factory.encoder.flush(device);
             });
@@ -171,9 +171,9 @@ impl Terminal {
     }
 }
 
-fn display_box(win_size: Size, bcg: Color, fgc: Color, context: Context, graphics: &mut G2d) {
+fn display_box(win_size: Size, bgc: Color, fgc: Color, context: Context, graphics: &mut G2d) {
     rectangle(fgc, [10.0, 10.0, win_size.width - 20.0, win_size.height - 20.0], context.transform, graphics);
-    rectangle(bcg, [15.0, 15.0, win_size.width - 30.0, win_size.height - 30.0], context.transform, graphics);
+    rectangle(bgc, [15.0, 15.0, win_size.width - 30.0, win_size.height - 30.0], context.transform, graphics);
 }
 
 fn display_message(message: &Vec<String>, glyphs: &mut Glyphs, fgc: Color, context: Context, graphics: &mut G2d)  {
@@ -207,23 +207,21 @@ fn display_input(win_size: Size, message: &str, glyphs: &mut Glyphs, fgc: Color,
     ).unwrap();
 }
 
-fn display_filter(win_size: Size, contain_box: bool, bgc: Color, fgc: Color, context: Context, graphics: &mut G2d) {
-    let mut line_color: Color = [bgc[0] - 0.2, bgc[1] - 0.2, bgc[2] - 0.2, 0.5];
-    if color_brighter(fgc, bgc) {
-        line_color = [line_color[0] - 0.2, line_color[1] - 0.2, line_color[2] - 0.2, 0.5];
+fn display_filter(win_size: Size, bgc: Color, fgc: Color, context: Context, graphics: &mut G2d) {
+    let line_color: Color = if color_brighter(fgc, bgc) {
+        [bgc[0] - 0.2, bgc[1] - 0.2, bgc[2] - 0.2, 0.5]
     } else {
-        line_color = [line_color[0] + 0.15, line_color[1] + 0.15, line_color[2] + 0.15, 0.4];
-    }
+        [bgc[0] + 0.15, bgc[1] + 0.15, bgc[2] + 0.15, 0.4]
+    };
     
-    if contain_box {
-        for i in 0..((win_size.height - 30.0) as i32 / 5) {
-            rectangle(line_color, [15.0, (i * 5) as f64 + 15.0, win_size.width - 30.0, 2.0], context.transform, graphics);
-        }
-    } else {
-        for i in 0..(win_size.height as i32 / 5) {
-            rectangle(line_color, [0.0, (i * 5) as f64, win_size.width, 2.0], context.transform, graphics);
-        }
+    for i in 0..((win_size.height - 30.0) as i32 / 5) {
+        rectangle(line_color, [15.0, (i * 5) as f64 + 15.0, win_size.width - 30.0, 2.0], context.transform, graphics);
     }
+
+    rectangle(bgc, [0.0, 0.0, win_size.width, 10.0], context.transform, graphics);
+    rectangle(bgc, [0.0, 0.0, 10.0, win_size.height], context.transform, graphics);
+    rectangle(bgc, [win_size.width - 10.0, 0.0, 10.0, win_size.height], context.transform, graphics);
+    rectangle(bgc, [0.0, win_size.height - 10.0, win_size.width, 10.0], context.transform, graphics);
 }
 
 fn color_brighter(a: Color, b: Color) -> bool {
