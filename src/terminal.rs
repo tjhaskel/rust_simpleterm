@@ -3,7 +3,7 @@ use std::path::Path;
 use std::{thread, time::Duration};
 
 const TYPE_TIME: Duration = Duration::from_millis(30);
-const TEXT_OFFSET: (f64, f64) = (20.0, 40.0);
+const TEXT_OFFSET: (f64, f64) = (25.0, 50.0);
 
 pub struct Terminal {
     window: PistonWindow,
@@ -74,6 +74,7 @@ impl Terminal {
                         display_box(win_size, bgc, fgc, c, g);
                         display_message(&typed_message, glyphs, fgc, c, g);
                         display_input(win_size, current_input, glyphs, fgc, c, g);
+                        display_filter(win_size, c, g);
                     
                         glyphs.factory.encoder.flush(device);
                     });
@@ -111,6 +112,7 @@ impl Terminal {
                 display_box(win_size, bgc, fgc, c, g);
                 display_message(message, glyphs, fgc, c, g);
                 display_input(win_size, current_input, glyphs, fgc, c, g);
+                display_filter(win_size, c, g);
             
                 glyphs.factory.encoder.flush(device);
             });
@@ -150,6 +152,7 @@ impl Terminal {
                 display_box(win_size, bgc, fgc, c, g);
                 display_message(message, glyphs, fgc, c, g);
                 display_input(win_size, &input_string[..], glyphs, fgc, c, g);
+                display_filter(win_size, c, g);
             
                 glyphs.factory.encoder.flush(device);
             });
@@ -193,4 +196,10 @@ fn display_input(win_size: Size, message: &str, glyphs: &mut Glyphs, fgc: Color,
         context.transform.trans(x, y),
         graphics,
     ).unwrap();
+}
+
+fn display_filter(win_size: Size, context: Context, graphics: &mut G2d) {
+    for i in 0..(win_size.height as i32 / 5) {
+        rectangle([0.0, 0.0, 0.0, 0.5], [0.0, (i * 5) as f64, win_size.width, 3.0], context.transform, graphics);
+    }
 }
