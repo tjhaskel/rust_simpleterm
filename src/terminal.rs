@@ -1,9 +1,10 @@
 use piston_window::{*, types::Color};
 use std::path::Path;
-use std::{thread, time::Duration};
+use std::{thread, time::Duration, time::Instant};
 
 use crate::color::TermColor;
 
+const FLASH_TIME: Duration = Duration::from_millis(500);
 const TYPE_TIME: Duration = Duration::from_millis(30);
 const TEXT_OFFSET: (f64, f64) = (25.0, 50.0);
 
@@ -74,6 +75,7 @@ impl Terminal {
             let line_len: usize = line.len();
             for j in 1..line_len {
                 typed_message[i] = String::from(&line[..=j]);
+                typed_message[i].push_str("[]");
                 if let Some(e) = self.window.next() {
                     let win_size: Size = self.window.window.size();
 
@@ -89,6 +91,8 @@ impl Terminal {
                     });
                     thread::sleep(TYPE_TIME);
                 }
+                typed_message[i].pop();
+                typed_message[i].pop();
             }
         }
     }
@@ -103,6 +107,7 @@ impl Terminal {
         let glyphs: &mut Glyphs = &mut self.glyphs;
         let use_filter: bool = self.scanlines;
         
+        let mut start: Instant = Instant::now();
         while let Some(e) = self.window.next() {
             let win_size: Size = self.window.window.size();
 
@@ -115,13 +120,15 @@ impl Terminal {
             });
 
             if ready { break; }
-            
+
+            let now: Instant = Instant::now();
             self.window.draw_2d(&e, |c, g, device| {
                 clear(bgc, g);
 
                 display_box(win_size, bgc, fgc, c, g);
                 display_message(message, glyphs, fgc, c, g);
-                display_input(win_size, current_input, glyphs, fgc, c, g);
+                display_input_marker(win_size, glyphs, fgc, c, g);
+                if check_flash(now, &mut start) { display_input(win_size, current_input, glyphs, fgc, c, g); }
                 if use_filter { display_filter(win_size, bgc, fgc, c, g); }
             
                 glyphs.factory.encoder.flush(device);
@@ -139,6 +146,7 @@ impl Terminal {
         let glyphs: &mut Glyphs = &mut self.glyphs;
         let use_filter: bool = self.scanlines;
         
+        let mut start: Instant = Instant::now();
         while let Some(e) = self.window.next() {
             let win_size: Size = self.window.window.size();
 
@@ -157,12 +165,23 @@ impl Terminal {
                 input_string = String::default();
             }
             
+            let now: Instant = Instant::now();
             self.window.draw_2d(&e, |c, g, device| {
                 clear(bgc, g);
 
                 display_box(win_size, bgc, fgc, c, g);
                 display_message(message, glyphs, fgc, c, g);
-                display_input(win_size, &input_string[..], glyphs, fgc, c, g);
+                display_input_marker(win_size, glyphs, fgc, c, g);
+
+                if check_flash(now, &mut start) {
+                    input_string.push_str("[]");
+                    display_input(win_size, &input_string[..], glyphs, fgc, c, g);
+                    input_string.pop();
+                    input_string.pop();
+                } else {
+                    display_input(win_size, &input_string[..], glyphs, fgc, c, g);
+                }
+                
                 if use_filter { display_filter(win_size, bgc, fgc, c, g); }
             
                 glyphs.factory.encoder.flush(device);
@@ -196,8 +215,21 @@ fn display_message(message: &Vec<String>, glyphs: &mut Glyphs, fgc: Color, conte
     }
 }
 
-fn display_input(win_size: Size, message: &str, glyphs: &mut Glyphs, fgc: Color, context: Context, graphics: &mut G2d)  {
+fn display_input_marker(win_size: Size, glyphs: &mut Glyphs, fgc: Color, context: Context, graphics: &mut G2d) {
     let x = TEXT_OFFSET.0;
+    let y = (win_size.height - TEXT_OFFSET.1) + 20.0;
+
+    text::Text::new_color(fgc, 32).draw(
+        "> ",
+        glyphs,
+        &context.draw_state,
+        context.transform.trans(x, y),
+        graphics,
+    ).unwrap();
+}
+
+fn display_input(win_size: Size, message: &str, glyphs: &mut Glyphs, fgc: Color, context: Context, graphics: &mut G2d)  {
+    let x = TEXT_OFFSET.0 + 20.0;
     let y = (win_size.height - TEXT_OFFSET.1) + 20.0;
 
     text::Text::new_color(fgc, 32).draw(
@@ -224,4 +256,16 @@ fn display_filter(win_size: Size, bgc: Color, fgc: Color, context: Context, grap
     rectangle(bgc, [0.0, 0.0, 10.0, win_size.height], context.transform, graphics);
     rectangle(bgc, [win_size.width - 10.0, 0.0, 10.0, win_size.height], context.transform, graphics);
     rectangle(bgc, [0.0, win_size.height - 10.0, win_size.width, 10.0], context.transform, graphics);
+}
+
+fn check_flash(now: Instant, then: &mut Instant) -> bool {
+    let time_since: Duration = now.duration_since(*then);
+    if time_since > (FLASH_TIME * 2) {
+        *then = now;
+        true
+    } else if time_since > FLASH_TIME { 
+        true
+    } else {
+        false
+    }
 }
