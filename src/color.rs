@@ -19,4 +19,3 @@ impl TermColor for Color {
         weighted_add.sqrt() * self[3]
     }
 }
-
