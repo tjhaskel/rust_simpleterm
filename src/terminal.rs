@@ -1,4 +1,4 @@
-use piston_window::{*, types::Color};
+use piston_window::{*, types::{Color, FontSize}};
 use std::path::Path;
 use std::{thread, time::Instant};
 
@@ -8,6 +8,7 @@ pub struct Terminal {
     window: PistonWindow,
     bg_color: Color,
     fg_color: Color,
+    font_size: FontSize,
     glyphs: Glyphs,
     message: Vec<String>,
     input: String,
@@ -15,7 +16,7 @@ pub struct Terminal {
 }
 
 impl Terminal {
-    pub fn new(title: &str, bg: Color, fg: Color, font: &str) -> Terminal {
+    pub fn new(title: &str, bg: Color, fg: Color, font: &str, font_size: u32) -> Terminal {
         let mut new_window: PistonWindow = WindowSettings::new(title, [800, 600]).exit_on_esc(true).build().unwrap();
         let resources: &Path = Path::new("resources");
         let loaded_glyphs = new_window.load_font(resources.join(font)).unwrap();
@@ -24,6 +25,7 @@ impl Terminal {
             window: new_window,
             bg_color: bg,
             fg_color: fg,
+            font_size: font_size,
             glyphs: loaded_glyphs,
             message: Vec::new(),
             input: String::default(),
@@ -57,10 +59,12 @@ impl Terminal {
     }
 
     fn type_message(&mut self) {
+        self.process_message();
         let bgc: Color = self.bg_color;
         let fgc: Color = self.fg_color;
         let current_input: &str = &(self.input[..]);
         let glyphs = &mut self.glyphs;
+        let font_size: FontSize = self.font_size;
 
         let mut typed_message: Vec<String> = Vec::new();
         let use_filter: bool = self.scanlines;
@@ -79,9 +83,9 @@ impl Terminal {
                         clear(bgc, g);
 
                         display_box(win_size, bgc, fgc, c, g);
-                        display_message(&typed_message, glyphs, fgc, c, g);
-                        display_input(win_size, current_input, glyphs, fgc, c, g);
-                        if use_filter { display_filter(win_size, bgc, fgc, c, g); }
+                        display_message(&typed_message, glyphs, font_size, fgc, c, g);
+                        display_input(win_size, current_input, glyphs, font_size, fgc, c, g);
+                        display_filter(win_size, bgc, fgc, use_filter, c, g);
                     
                         glyphs.factory.encoder.flush(device);
                     });
@@ -98,9 +102,12 @@ impl Terminal {
 
         let bgc: Color = self.bg_color;
         let fgc: Color = self.fg_color;
+
+        self.process_message();
         let message: &Vec<String> = &self.message;
         let current_input: &str = &(self.input);
         let glyphs: &mut Glyphs = &mut self.glyphs;
+        let font_size: FontSize = self.font_size;
         let use_filter: bool = self.scanlines;
         
         let mut start: Instant = Instant::now();
@@ -122,10 +129,10 @@ impl Terminal {
                 clear(bgc, g);
 
                 display_box(win_size, bgc, fgc, c, g);
-                display_message(message, glyphs, fgc, c, g);
-                display_input_marker(win_size, glyphs, fgc, c, g);
-                if check_flash(now, &mut start) { display_input(win_size, current_input, glyphs, fgc, c, g); }
-                if use_filter { display_filter(win_size, bgc, fgc, c, g); }
+                display_message(message, glyphs, font_size, fgc, c, g);
+                display_input_marker(win_size, glyphs, font_size, fgc, c, g);
+                if check_flash(now, &mut start) { display_input(win_size, current_input, glyphs, font_size, fgc, c, g); }
+                display_filter(win_size, bgc, fgc, use_filter, c, g);
             
                 glyphs.factory.encoder.flush(device);
             });
@@ -138,8 +145,11 @@ impl Terminal {
 
         let bgc: Color = self.bg_color;
         let fgc: Color = self.fg_color;
+
+        self.process_message();
         let message: &Vec<String> = &self.message;
         let glyphs: &mut Glyphs = &mut self.glyphs;
+        let font_size: FontSize = self.font_size;
         let use_filter: bool = self.scanlines;
         
         let mut start: Instant = Instant::now();
@@ -166,19 +176,19 @@ impl Terminal {
                 clear(bgc, g);
 
                 display_box(win_size, bgc, fgc, c, g);
-                display_message(message, glyphs, fgc, c, g);
-                display_input_marker(win_size, glyphs, fgc, c, g);
+                display_message(message, glyphs, font_size, fgc, c, g);
+                display_input_marker(win_size, glyphs, font_size, fgc, c, g);
 
                 if check_flash(now, &mut start) {
                     input_string.push_str("[]");
-                    display_input(win_size, &input_string[..], glyphs, fgc, c, g);
+                    display_input(win_size, &input_string[..], glyphs, font_size, fgc, c, g);
                     input_string.pop();
                     input_string.pop();
                 } else {
-                    display_input(win_size, &input_string[..], glyphs, fgc, c, g);
+                    display_input(win_size, &input_string[..], glyphs, font_size, fgc, c, g);
                 }
                 
-                if use_filter { display_filter(win_size, bgc, fgc, c, g); }
+                display_filter(win_size, bgc, fgc, use_filter, c, g);
             
                 glyphs.factory.encoder.flush(device);
             });
@@ -186,4 +196,54 @@ impl Terminal {
             if input_accepted { break; }
         }
     }
+
+    fn process_message(&mut self) {
+        let max_chars: usize = self.get_max_characters();
+
+        let mut new_message_vec: Vec<String> = Vec::new();
+
+        for old_message in self.message.iter() {
+            let mut new_message: String = String::new();
+
+            for word in old_message.split_whitespace() {
+                if word.len() > max_chars {
+                    new_message_vec.append(&mut split_every_nth(word, max_chars));
+                } else if new_message.len() + word.len() > max_chars {
+                    new_message_vec.push(new_message);
+                    new_message = String::from(word);
+                } else {
+                    new_message = format!("{} {}", new_message, word);
+                }
+            }
+
+            new_message_vec.push(new_message);
+        }
+
+        self.message = new_message_vec;
+    }
+
+    fn get_max_characters(&self) -> usize {
+        ((self.window.window.size().width / self.font_size as f64) * 2.0) as usize
+    }
+}
+
+fn split_every_nth(x: &str, n: usize) -> Vec<String> {
+    let mut result: Vec<String> = Vec::new();
+
+    let mut count: usize = 0;
+    let mut current_string: String = String::default();
+    for c in x.chars() {
+        if count >= n {
+            result.push(current_string);
+            current_string = format!("{}", c);
+            count = 1;
+        } else {
+            current_string.push(c);
+            count += 1;
+        }
+    }
+    result.push(current_string);
+
+    println!("{:?}", result);
+    result
 }
