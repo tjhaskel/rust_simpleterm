@@ -244,6 +244,5 @@ fn split_every_nth(x: &str, n: usize) -> Vec<String> {
     }
     result.push(current_string);
 
-    println!("{:?}", result);
     result
 }
