@@ -2,6 +2,7 @@ use std::time::Duration;
 
 pub mod color;
 pub mod draw;
+pub mod message;
 pub mod terminal;
 
 const FLASH_TIME: Duration = Duration::from_millis(500);
