@@ -1,8 +1,8 @@
 use piston_window::{*, types::{Color, FontSize}};
 use std::path::Path;
-use std::{thread, time::Instant};
+use std::{thread, time::{Duration, Instant}};
 
-use crate::{draw::*, TYPE_TIME};
+use crate::{draw::*, message::*, TYPE_TIME};
 
 pub struct Terminal {
     window: PistonWindow,
@@ -10,7 +10,7 @@ pub struct Terminal {
     fg_color: Color,
     font_size: FontSize,
     glyphs: Glyphs,
-    message: Vec<String>,
+    message: Vec<Message>,
     input: String,
     scanlines: bool,
 }
@@ -37,21 +37,31 @@ impl Terminal {
         self.scanlines = enabled;
     }
 
-    pub fn tell(&mut self, message: &str) {
-        self.new_message(message);
-        self.input = String::from("Press Enter to Continue");
-        self.wait_for_continue();
+    pub fn tell(&mut self, message: &str, color: Color) {
+        self.display(message, color, contains_quote(message), false, true);
     }
 
-    pub fn ask(&mut self, message: &str) -> String {
-        self.new_message(message);
+    pub fn show(&mut self, message: &str, color: Color, time: f64) {
+        self.display(message, color, contains_quote(message), true, false);
+        thread::sleep(Duration::from_secs_f64(time));
+    }
+
+    pub fn display(&mut self, message: &str, color: Color, quote: bool, fast: bool, wait: bool) {
+        self.new_message(message, color, quote);
+        self.type_message();
+        if wait { self.wait_for_continue(); }
+    }
+
+    pub fn ask(&mut self, message: &str, color: Color) -> String {
+        self.display(message, color, contains_quote(message), false, false);
         self.wait_for_input();
         self.get_input()
     }
 
-    fn new_message(&mut self, message: &str) {
-        self.message = message.split("\n").map(|x| String::from(x)).collect();
-        self.type_message();
+    fn new_message(&mut self, message: &str, color: Color, quote: bool) {
+        for line in message.split("\n") {
+            self.message.push(Message::new(line, color, quote));
+        }
     }
 
     fn get_input(&self) -> String {
@@ -60,51 +70,41 @@ impl Terminal {
 
     fn type_message(&mut self) {
         self.process_message();
+        let message: &Vec<Message> = &self.message;
         let bgc: Color = self.bg_color;
         let fgc: Color = self.fg_color;
         let current_input: &str = &(self.input[..]);
         let glyphs = &mut self.glyphs;
         let font_size: FontSize = self.font_size;
 
-        let mut typed_message: Vec<String> = Vec::new();
         let use_filter: bool = self.scanlines;
 
-        for (i, line) in self.message.iter().enumerate() {
-            typed_message.push(String::default());
+        if let Some(e) = self.window.next() {
+            let win_size: Size = self.window.window.size();
 
-            let line_len: usize = line.len();
-            for j in 1..line_len {
-                typed_message[i] = String::from(&line[..=j]);
-                typed_message[i].push_str("[]");
-                if let Some(e) = self.window.next() {
-                    let win_size: Size = self.window.window.size();
+            self.window.draw_2d(&e, |c, g, device| {
+                clear(bgc, g);
 
-                    self.window.draw_2d(&e, |c, g, device| {
-                        clear(bgc, g);
-
-                        display_box(win_size, bgc, fgc, c, g);
-                        display_message(&typed_message, glyphs, font_size, fgc, c, g);
-                        display_input(win_size, current_input, glyphs, font_size, fgc, c, g);
-                        display_filter(win_size, bgc, fgc, use_filter, c, g);
-                    
-                        glyphs.factory.encoder.flush(device);
-                    });
-                    thread::sleep(TYPE_TIME);
-                }
-                typed_message[i].pop();
-                typed_message[i].pop();
-            }
+                display_box(win_size, bgc, fgc, c, g);
+                display_messages(message, glyphs, font_size, fgc, c, g);
+                display_input(win_size, current_input, glyphs, font_size, fgc, c, g);
+                display_filter(win_size, bgc, fgc, use_filter, c, g);
+            
+                glyphs.factory.encoder.flush(device);
+            });
+            thread::sleep(TYPE_TIME);
         }
     }
 
     fn wait_for_continue(&mut self) {
         let mut ready: bool = false;
+        self.input = String::from("Press Enter to continue.");
 
         let bgc: Color = self.bg_color;
         let fgc: Color = self.fg_color;
 
         self.process_message();
-        let message: &Vec<String> = &self.message;
+        let message: &Vec<Message> = &self.message;
         let current_input: &str = &(self.input);
         let glyphs: &mut Glyphs = &mut self.glyphs;
         let font_size: FontSize = self.font_size;
@@ -129,7 +129,7 @@ impl Terminal {
                 clear(bgc, g);
 
                 display_box(win_size, bgc, fgc, c, g);
-                display_message(message, glyphs, font_size, fgc, c, g);
+                display_messages(message, glyphs, font_size, fgc, c, g);
                 display_input_marker(win_size, glyphs, font_size, fgc, c, g);
                 if check_flash(now, &mut start) { display_input(win_size, current_input, glyphs, font_size, fgc, c, g); }
                 display_filter(win_size, bgc, fgc, use_filter, c, g);
@@ -147,7 +147,7 @@ impl Terminal {
         let fgc: Color = self.fg_color;
 
         self.process_message();
-        let message: &Vec<String> = &self.message;
+        let message: &Vec<Message> = &self.message;
         let glyphs: &mut Glyphs = &mut self.glyphs;
         let font_size: FontSize = self.font_size;
         let use_filter: bool = self.scanlines;
@@ -176,7 +176,7 @@ impl Terminal {
                 clear(bgc, g);
 
                 display_box(win_size, bgc, fgc, c, g);
-                display_message(message, glyphs, font_size, fgc, c, g);
+                display_messages(message, glyphs, font_size, fgc, c, g);
                 display_input_marker(win_size, glyphs, font_size, fgc, c, g);
 
                 if check_flash(now, &mut start) {
@@ -198,28 +198,7 @@ impl Terminal {
     }
 
     fn process_message(&mut self) {
-        let max_chars: usize = self.get_max_characters();
-
-        let mut new_message_vec: Vec<String> = Vec::new();
-
-        for old_message in self.message.iter() {
-            let mut new_message: String = String::new();
-
-            for word in old_message.split_whitespace() {
-                if word.len() > max_chars {
-                    new_message_vec.append(&mut split_every_nth(word, max_chars));
-                } else if new_message.len() + word.len() > max_chars {
-                    new_message_vec.push(new_message);
-                    new_message = String::from(word);
-                } else {
-                    new_message = format!("{} {}", new_message, word);
-                }
-            }
-
-            new_message_vec.push(new_message);
-        }
-
-        self.message = new_message_vec;
+        self.message = process_messages(&self.message, self.get_max_characters());
     }
 
     fn get_max_characters(&self) -> usize {
@@ -245,4 +224,19 @@ fn split_every_nth(x: &str, n: usize) -> Vec<String> {
     result.push(current_string);
 
     result
+}
+
+// Returns true if the line contains two quotation marks.
+fn contains_quote(line: &str) -> bool {
+    let mut seen_quote: bool = false;
+
+    for c in line.chars() {
+        if c == '"' && seen_quote {
+            return true;
+        } else {
+            seen_quote = true;
+        }
+    }
+
+    false
 }

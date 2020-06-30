@@ -8,24 +8,6 @@ pub fn display_box(win_size: Size, bgc: Color, fgc: Color, context: Context, gra
     rectangle(bgc, [15.0, 15.0, win_size.width - 30.0, win_size.height - 30.0], context.transform, graphics);
 }
 
-pub fn display_message(message: &Vec<String>, glyphs: &mut Glyphs, font_size: FontSize, fgc: Color, context: Context, graphics: &mut G2d)  {
-    let x = TEXT_OFFSET.0;
-    let y = TEXT_OFFSET.1;
-
-    let mut y_offset: f64 = 0.0;
-    for line in message.iter() {
-        text::Text::new_color(fgc, font_size).draw(
-            line,
-            glyphs,
-            &context.draw_state,
-            context.transform.trans(x, y + y_offset),
-            graphics,
-        ).unwrap();
-
-        y_offset += font_size as f64;
-    }
-}
-
 pub fn display_input_marker(win_size: Size, glyphs: &mut Glyphs, font_size: FontSize, fgc: Color, context: Context, graphics: &mut G2d) {
     let x = TEXT_OFFSET.0;
     let y = (win_size.height - TEXT_OFFSET.1) + 20.0;
