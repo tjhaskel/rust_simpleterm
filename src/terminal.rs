@@ -48,7 +48,7 @@ impl Terminal {
 
     pub fn display(&mut self, message: &str, color: Color, quote: bool, fast: bool, wait: bool) {
         self.new_message(message, color, quote);
-        self.type_message();
+        self.type_message(fast);
         if wait { self.wait_for_continue(); }
     }
 
@@ -68,7 +68,7 @@ impl Terminal {
         self.input.clone()
     }
 
-    fn type_message(&mut self) {
+    fn type_message(&mut self, fast: bool) {
         self.process_message();
         let message: &Vec<Message> = &self.message;
         let bgc: Color = self.bg_color;
@@ -86,7 +86,11 @@ impl Terminal {
                 clear(bgc, g);
 
                 display_box(win_size, bgc, fgc, c, g);
-                display_messages(message, glyphs, font_size, fgc, c, g);
+                if fast {
+                    display_messages(message, glyphs, font_size, fgc, c, g);
+                } else {
+                    type_messages(message, glyphs, font_size, fgc, c, g);
+                }
                 display_input(win_size, current_input, glyphs, font_size, fgc, c, g);
                 display_filter(win_size, bgc, fgc, use_filter, c, g);
             
@@ -204,26 +208,6 @@ impl Terminal {
     fn get_max_characters(&self) -> usize {
         ((self.window.window.size().width / self.font_size as f64) * 2.0) as usize
     }
-}
-
-fn split_every_nth(x: &str, n: usize) -> Vec<String> {
-    let mut result: Vec<String> = Vec::new();
-
-    let mut count: usize = 0;
-    let mut current_string: String = String::default();
-    for c in x.chars() {
-        if count >= n {
-            result.push(current_string);
-            current_string = format!("{}", c);
-            count = 1;
-        } else {
-            current_string.push(c);
-            count += 1;
-        }
-    }
-    result.push(current_string);
-
-    result
 }
 
 // Returns true if the line contains two quotation marks.

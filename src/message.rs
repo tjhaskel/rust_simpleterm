@@ -65,8 +65,8 @@ impl Message {
             }
             match c {
                 '!' | 'I' | 'i' | 'j' | 'l' | '\'' => { x_offset += font_size as f64 / 4.0; }
-                '"' | '1' | ' ' | 'f' | 'r' | 's' | 't'=> { x_offset += font_size as f64 / 3.0; }
-                'F' | 'J' | 'L' | 'c' | 'k' | 'u' | 'x' | 'y' | 'z' => { x_offset += font_size as f64 / 2.5; }
+                '"' | '1' | ' ' | 'f' | 'r' | 't'=> { x_offset += font_size as f64 / 3.0; }
+                'F' | 'J' | 'L' | 'c' | 'k' | 's' | 'x' | 'y' | 'z' => { x_offset += font_size as f64 / 2.5; }
                 'G' | 'M' | 'N' | 'O' | 'Q' | 'W' | 'm' | 'w' => { x_offset += font_size as f64 / 1.5; }
                 _ => { x_offset += font_size as f64 / 2.0; }
             }
