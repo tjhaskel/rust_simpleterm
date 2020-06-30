@@ -3,23 +3,19 @@ simple fake terminal
 
 it can:
 
-1. display text, typing it out one character at a time and respecting newlines - done
+1. display text, typing it out one character at a time and respecting newlines - todo
 
-2. prompt the user to continue (hit enter) - done
+2. prompt the user to continue (hit enter) - todo
 
-3. prompt the user for input (strings or numbers) - strings: done, numbers: todo
+3. prompt the user for input (strings or numbers) - todo
 
 
 Other features:
 
-* pretty interface - done
+* pretty interface - todo
 
 * colored text - todo
-
-* sound effects (optional) - dropped
 
 * flashing cursor - done
 
 * ascii-art easter eggs - todo
-
-* saved history of text and responses - dropped
