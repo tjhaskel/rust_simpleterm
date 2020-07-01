@@ -1,15 +1,14 @@
 use cgmath::Point2;
 use ggez::conf::{WindowMode, WindowSetup};
-use ggez::event;
+use ggez::{event, timer};
 use ggez::graphics::{self, Align, Color, DrawParam, Font, Scale, Text, TextFragment};
-use ggez::timer;
 use ggez::{Context, ContextBuilder, event::EventsLoop, GameResult};
-use std::env;
-use std::f32;
-use std::path;
+use std::{env, f32, path};
+
+use crate::{TEXT_OFFSET, FLASH_TIME, TYPE_TIME};
 
 pub struct Terminal {
-    message: Vec<Text>,
+    message: Text,
     input: Text,
     font: Font,
     font_size: Scale,
@@ -17,6 +16,7 @@ pub struct Terminal {
     fg_color: Color,
     scan_lines: bool,
     state: TermState,
+    counter: u32,
     timer: f64,
 }
 
@@ -31,7 +31,7 @@ enum TermState {
 impl Terminal {
     pub fn new(ctx: &mut Context, font_file: &str, font_size: f32, bgc: Color, fcg: Color) -> GameResult<Terminal> {
         Ok( Terminal {
-            message: Vec::new(),
+            message: Text::default(),
             input: Text::default(),
             font: Font::new(ctx, font_file)?,
             font_size: Scale::uniform(font_size),
@@ -39,19 +39,22 @@ impl Terminal {
             fg_color: fcg,
             scan_lines: true,
             state: TermState::Continue,
+            counter: 0,
             timer: 0.0,
         })
     }
 
-    pub fn say(&mut self, ctx: &mut Context, events: &mut EventsLoop, text: &str) -> GameResult {
-        let new_message = Text::new( TextFragment {
+    pub fn tell(&mut self, ctx: &mut Context, events: &mut EventsLoop, text: &str) -> GameResult {
+        self.message = Text::new( TextFragment {
             text: text.to_string(),
             color: Some(self.fg_color),
             font: Some(self.font),
             scale: Some(self.font_size),
         });
 
-        self.message = vec!(new_message);
+        self.state = TermState::Typing;
+        self.counter = 0;
+        self.timer = 0.0;
 
         event::run(ctx, events, self)
     }
@@ -67,11 +70,8 @@ impl event::EventHandler for Terminal {
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         graphics::clear(ctx, self.bg_color);
 
-        let mut height = 0.0;
-        for text in &self.message {
-            graphics::queue_text(ctx, text, Point2::new(20.0, 20.0 + height), None);
-            height += 20.0 + text.height(ctx) as f32;
-        }
+        let text = &self.message;
+        graphics::queue_text(ctx, text, TEXT_OFFSET, None);
 
         graphics::draw_queued_text(
             ctx,
@@ -86,12 +86,8 @@ impl event::EventHandler for Terminal {
     }
 
     fn resize_event(&mut self, ctx: &mut Context, width: f32, height: f32) {
-        for message in self.message.iter_mut() {
-            message.set_bounds(Point2::new(width - 40.0, 400.0), Align::Left);
-        }
-
-        graphics::set_screen_coordinates(ctx, graphics::Rect::new(0.0, 0.0, width, height))
-            .unwrap();
+        self.message.set_bounds(Point2::new(width - (TEXT_OFFSET.x * 2.0), (height * 0.8) - (TEXT_OFFSET.y * 2.0)), Align::Left);
+        graphics::set_screen_coordinates(ctx, graphics::Rect::new(0.0, 0.0, width, height)).unwrap();
     }
 }
 
