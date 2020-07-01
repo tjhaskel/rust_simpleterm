@@ -5,7 +5,7 @@ use ggez::graphics::{self, Align, Color, Font, Scale, Text, TextFragment};
 use ggez::{Context, ContextBuilder, event::EventsLoop, GameResult};
 use std::{env, f32, path};
 
-use crate::{draw::{draw_background, draw_text}, TEXT_OFFSET};
+use crate::{draw::{draw_background, draw_text}, TEXT_OFFSET, TYPE_TIME};
 
 pub struct Terminal {
     pub message: Text,
@@ -17,7 +17,8 @@ pub struct Terminal {
     pub scan_lines: bool,
     pub state: TermState,
     pub counter: u32,
-    pub timer: f64,
+    pub timer: i128,
+    pub goal: u32,
 }
 
 pub enum TermState {
@@ -40,21 +41,26 @@ impl Terminal {
             scan_lines: true,
             state: TermState::Continue,
             counter: 0,
-            timer: 0.0,
+            timer: 0,
+            goal: 0,
         })
     }
 
     pub fn tell(&mut self, ctx: &mut Context, events: &mut EventsLoop, text: &str) -> GameResult {
-        self.message = Text::new( TextFragment {
-            text: text.to_string(),
-            color: Some(self.fg_color),
-            font: Some(self.font),
-            scale: Some(self.font_size),
-        });
-
+        let mut new_message: Text = Text::default();
+        for c in text.chars() {
+            new_message.add( TextFragment {
+                text: c.to_string(),
+                color: Some(self.fg_color),
+                font: Some(self.font),
+                scale: Some(self.font_size),
+            });
+        }
+        self.message = new_message;
         self.state = TermState::Typing;
         self.counter = 0;
-        self.timer = 0.0;
+        self.goal = self.message.contents().len() as u32;
+        self.timer = TYPE_TIME.as_millis() as i128;
 
         event::run(ctx, events, self)
     }
@@ -62,6 +68,20 @@ impl Terminal {
 
 impl event::EventHandler for Terminal {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
+        match self.state {
+            TermState::Typing => {
+                if self.counter > self.goal {
+                    self.state = TermState::WaitContinue;
+                } else if self.timer <= 0 {
+                    self.timer = TYPE_TIME.as_millis() as i128;
+                    self.counter += 1;
+                } else {
+                    self.timer -= timer::delta(ctx).as_millis() as i128;
+                }
+            },
+            _ => { () }
+        }
+        
         const DESIRED_FPS: u32 = 60;
         while timer::check_update_time(ctx, DESIRED_FPS) {}
         Ok(())

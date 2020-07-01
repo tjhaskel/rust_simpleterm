@@ -1,7 +1,7 @@
 use ggez::{Context, GameResult};
-use ggez::graphics::{self, DrawMode, DrawParam, Mesh, Rect};
+use ggez::graphics::{self, DrawMode, DrawParam, Mesh, Rect, Text, TextFragment};
 
-use crate::{terminal::Terminal, TEXT_OFFSET};
+use crate::{terminal::{Terminal, TermState}, TEXT_OFFSET};
 
 pub fn draw_background(term: &mut Terminal, ctx: &mut Context) -> GameResult {
     graphics::clear(ctx, term.bg_color);
@@ -19,6 +19,19 @@ pub fn draw_background(term: &mut Terminal, ctx: &mut Context) -> GameResult {
 
 pub fn draw_text(term: &mut Terminal, ctx: &mut Context) -> GameResult {
     let text = &term.message;
-    graphics::queue_text(ctx, text, TEXT_OFFSET, None);
+
+    match term.state {
+        TermState::Typing => {
+            let mut new_text: Text = text.clone();
+            for (i, frag) in new_text.fragments_mut().iter_mut().enumerate() {
+                if i > term.counter as usize { *frag = TextFragment::default(); }
+            }
+            graphics::queue_text(ctx, &new_text, TEXT_OFFSET, None);
+        },
+        _ => {
+            graphics::queue_text(ctx, text, TEXT_OFFSET, None);
+        }
+    }
+
     graphics::draw_queued_text(ctx, DrawParam::default(), None, graphics::FilterMode::Linear)
 }
