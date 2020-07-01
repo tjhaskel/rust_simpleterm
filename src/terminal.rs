@@ -1,26 +1,26 @@
 use cgmath::Point2;
 use ggez::conf::{WindowMode, WindowSetup};
 use ggez::{event, timer};
-use ggez::graphics::{self, Align, Color, DrawParam, Font, Scale, Text, TextFragment};
+use ggez::graphics::{self, Align, Color, Font, Scale, Text, TextFragment};
 use ggez::{Context, ContextBuilder, event::EventsLoop, GameResult};
 use std::{env, f32, path};
 
-use crate::{TEXT_OFFSET, FLASH_TIME, TYPE_TIME};
+use crate::{draw::{draw_background, draw_text}, TEXT_OFFSET};
 
 pub struct Terminal {
-    message: Text,
-    input: Text,
+    pub message: Text,
+    pub input: Text,
     font: Font,
     font_size: Scale,
-    bg_color: Color,
-    fg_color: Color,
-    scan_lines: bool,
-    state: TermState,
-    counter: u32,
-    timer: f64,
+    pub bg_color: Color,
+    pub fg_color: Color,
+    pub scan_lines: bool,
+    pub state: TermState,
+    pub counter: u32,
+    pub timer: f64,
 }
 
-enum TermState {
+pub enum TermState {
     Continue,
     Typing,
     WaitContinue,
@@ -67,19 +67,10 @@ impl event::EventHandler for Terminal {
         Ok(())
     }
 
-    fn draw(&mut self, ctx: &mut Context) -> GameResult {
-        graphics::clear(ctx, self.bg_color);
-
-        let text = &self.message;
-        graphics::queue_text(ctx, text, TEXT_OFFSET, None);
-
-        graphics::draw_queued_text(
-            ctx,
-            DrawParam::default(),
-            None,
-            graphics::FilterMode::Linear,
-        )?;
-
+    fn draw(&mut self, ctx: &mut Context) -> GameResult {  
+        draw_background(self, ctx)?;
+        draw_text(self, ctx)?;
+        
         graphics::present(ctx)?;
         timer::yield_now();
         Ok(())
