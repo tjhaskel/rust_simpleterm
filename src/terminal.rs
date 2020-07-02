@@ -3,11 +3,12 @@ use ggez::conf::{WindowMode, WindowSetup};
 use ggez::{event, timer};
 use ggez::graphics::{self, Align, Color, Font, Scale, Text, TextFragment};
 use ggez::{Context, ContextBuilder, event::EventsLoop, GameResult};
-use std::{env, f32, path};
+use std::{env, f32, path, thread};
 
-use crate::{draw::{draw_background, draw_text}, TEXT_OFFSET, TYPE_TIME};
+use crate::{command::Command, draw::{draw_background, draw_text}, TEXT_OFFSET, TYPE_TIME};
 
 pub struct Terminal {
+    queue: Vec<Command>,
     pub message: Text,
     pub input: Text,
     font: Font,
@@ -32,6 +33,7 @@ pub enum TermState {
 impl Terminal {
     pub fn new(ctx: &mut Context, font_file: &str, font_size: f32, bgc: Color, fcg: Color) -> GameResult<Terminal> {
         Ok( Terminal {
+            queue: Vec::new(),
             message: Text::default(),
             input: Text::default(),
             font: Font::new(ctx, font_file)?,
@@ -46,23 +48,21 @@ impl Terminal {
         })
     }
 
-    pub fn tell(&mut self, ctx: &mut Context, events: &mut EventsLoop, text: &str) -> GameResult {
-        let mut new_message: Text = Text::default();
-        for c in text.chars() {
-            new_message.add( TextFragment {
-                text: c.to_string(),
-                color: Some(self.fg_color),
-                font: Some(self.font),
-                scale: Some(self.font_size),
-            });
-        }
-        self.message = new_message;
-        self.state = TermState::Typing;
-        self.counter = 0;
-        self.goal = self.message.contents().len() as u32;
-        self.timer = TYPE_TIME.as_millis() as i128;
-
+    pub fn start(&mut self, ctx: &mut Context, events: &mut EventsLoop) -> GameResult {
+        println!("{:?}", self.queue);
         event::run(ctx, events, self)
+    }
+
+    pub fn ask(&mut self, text: &str) {
+        self.queue.push(Command::from(format!("ask: {}", text)));
+    }
+
+    pub fn show(&mut self, text: &str) {
+        self.queue.push(Command::from(format!("show: {}", text)));
+    }
+
+    pub fn tell(&mut self, text: &str) {
+        self.queue.push(Command::from(format!("tell: {}", text)));
     }
 }
 

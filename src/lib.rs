@@ -2,6 +2,7 @@ use cgmath::Point2;
 use ggez::graphics::Color;
 use std::time::Duration;
 
+pub mod command;
 pub mod draw;
 pub mod terminal;
 
