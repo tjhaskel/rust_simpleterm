@@ -33,6 +33,19 @@ impl Terminal {
         }
     }
 
+    pub fn set_bgc(&mut self, color: Color) {
+        self.bg_color = color;
+    }
+
+    pub fn set_fgc(&mut self, color: Color) {
+        self.fg_color = color;
+    }
+
+    pub fn set_colors(&mut self, bgc: Color, fgc: Color) {
+        self.set_bgc(bgc);
+        self.set_fgc(fgc);
+    }
+
     pub fn scan_lines(&mut self, enabled: bool) {
         self.scanlines = enabled;
     }
@@ -51,6 +64,8 @@ impl Terminal {
 
     fn new_message(&mut self, message: &str) {
         self.message = message.split("\n").map(|x| String::from(x)).collect();
+        self.process_message();
+        self.input = String::default();
         self.type_message();
     }
 
@@ -59,7 +74,6 @@ impl Terminal {
     }
 
     fn type_message(&mut self) {
-        self.process_message();
         let bgc: Color = self.bg_color;
         let fgc: Color = self.fg_color;
         let current_input: &str = &(self.input[..]);
@@ -103,7 +117,7 @@ impl Terminal {
         let bgc: Color = self.bg_color;
         let fgc: Color = self.fg_color;
 
-        self.process_message();
+        
         let message: &Vec<String> = &self.message;
         let current_input: &str = &(self.input);
         let glyphs: &mut Glyphs = &mut self.glyphs;
@@ -146,7 +160,6 @@ impl Terminal {
         let bgc: Color = self.bg_color;
         let fgc: Color = self.fg_color;
 
-        self.process_message();
         let message: &Vec<String> = &self.message;
         let glyphs: &mut Glyphs = &mut self.glyphs;
         let font_size: FontSize = self.font_size;
@@ -211,8 +224,10 @@ impl Terminal {
                 } else if new_message.len() + word.len() > max_chars {
                     new_message_vec.push(new_message);
                     new_message = String::from(word);
-                } else {
+                } else if new_message.len() > 0 {
                     new_message = format!("{} {}", new_message, word);
+                } else {
+                    new_message = String::from(word);
                 }
             }
 
@@ -223,7 +238,7 @@ impl Terminal {
     }
 
     fn get_max_characters(&self) -> usize {
-        ((self.window.window.size().width / self.font_size as f64) * 2.0) as usize
+        ((self.window.window.size().width / self.font_size as f64) * 2.15) as usize
     }
 }
 
