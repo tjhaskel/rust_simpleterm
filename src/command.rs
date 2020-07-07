@@ -8,9 +8,19 @@ pub enum CommandType {
 
 #[derive(Debug)]
 pub struct Command {
-    command_type: CommandType,
-    text: String,
-    timer: Option<f64>,
+    pub command_type: CommandType,
+    pub text: String,
+    pub timer: Option<f64>,
+}
+
+impl Command {
+    pub fn new(command_type: CommandType, text: String, timer: Option<f64>) -> Command {
+        Command {
+            command_type: command_type,
+            text: text,
+            timer: timer,
+        }
+    }
 }
 
 impl From<String> for Command {

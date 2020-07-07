@@ -5,7 +5,7 @@ use ggez::graphics::{self, Align, Color, Font, Scale, Text, TextFragment};
 use ggez::{Context, ContextBuilder, event::EventsLoop, GameResult};
 use std::{env, f32, path, thread};
 
-use crate::{command::Command, draw::{draw_background, draw_text}, TEXT_OFFSET, TYPE_TIME};
+use crate::{command::{Command, CommandType}, draw::{draw_background, draw_text}, TEXT_OFFSET, TYPE_TIME};
 
 pub struct Terminal {
     queue: Vec<Command>,
@@ -50,19 +50,46 @@ impl Terminal {
 
     pub fn start(&mut self, ctx: &mut Context, events: &mut EventsLoop) -> GameResult {
         println!("{:?}", self.queue);
+        self.queue.reverse();
+        self.process_next_command(ctx);
         event::run(ctx, events, self)
     }
 
     pub fn ask(&mut self, text: &str) {
-        self.queue.push(Command::from(format!("ask: {}", text)));
+        self.queue.push(Command::new(CommandType::Ask, String::from(text), None));
     }
 
-    pub fn show(&mut self, text: &str) {
-        self.queue.push(Command::from(format!("show: {}", text)));
+    pub fn show(&mut self, text: &str, time: f64) {
+        self.queue.push(Command::new(CommandType::Show, String::from(text), Some(time)));
     }
 
     pub fn tell(&mut self, text: &str) {
-        self.queue.push(Command::from(format!("tell: {}", text)));
+        self.queue.push(Command::new(CommandType::Tell, String::from(text), None));
+    }
+
+    fn process_next_command(&mut self, ctx: &mut Context){
+        if let Some(command) = self.queue.pop() {
+            match command.command_type {
+                CommandType::Ask => {
+                    self.counter = 0;
+                    self.goal = command.text.len() as u32;
+                    self.process_message(command.text);
+                    self.input = Text::default();
+                    self.state = TermState::Typing;
+                }
+                _ => {
+
+                }
+            }
+        } else {
+            event::quit(ctx);
+        }
+    }
+
+    fn process_message(&mut self, message: String) {
+        for c in message.chars() {
+            self.message.add(TextFragment::new(c));
+        }
     }
 }
 
@@ -71,11 +98,14 @@ impl event::EventHandler for Terminal {
         match self.state {
             TermState::Typing => {
                 if self.counter > self.goal {
+                    println!("in continue");
                     self.state = TermState::WaitContinue;
                 } else if self.timer <= 0 {
+                    println!("in timer");
                     self.timer = TYPE_TIME.as_millis() as i128;
                     self.counter += 1;
                 } else {
+                    println!("in waiting");
                     self.timer -= timer::delta(ctx).as_millis() as i128;
                 }
             },
