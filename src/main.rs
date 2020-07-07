@@ -1,15 +1,10 @@
-//! This example demonstrates how to use `Text` to draw TrueType font texts efficiently.
+use simpleterm::{terminal::Terminal, DEFAULT_BGC, DEFAULT_FGC};
 
-use ggez::GameResult;
+fn main() {
+    let mut term: Terminal = Terminal::new("simpleterm test", DEFAULT_BGC, DEFAULT_FGC, "LeagueSpartan-Regular.ttf", 32);
 
-use simpleterm::{terminal::{new_window, Terminal}, DARK_GREY, LIGHT_BLUE};
-
-pub fn main() -> GameResult {
-    let (ctx, events_loop) = &mut new_window("simpleterm test")?;
-    let term = &mut Terminal::new(ctx, "/LeagueSpartan-Regular.ttf", 24.0, DARK_GREY, LIGHT_BLUE)?;
-
-    term.ask("this is the ask command this is the ask command this is the ask command this is the ask command this is the ask command");
-    term.show("this is the show command", 2.5);
-    term.tell("this is the tell command");
-    term.start(ctx, events_loop)
+    term.tell("This is pretty cool! Here's a really long sentence to test stuff\nThis should be on a new line!");
+    let input_recieved: String = term.ask("Enter some input: ");
+    term.tell(&format!("You said: {}", input_recieved));
+    term.tell("01234567890123456789012345678900123456789012345678901234567890012345678901234567890123456789001234567890123456789012345678900123456789012345678901234567890");
 }

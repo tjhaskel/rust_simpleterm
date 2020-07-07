@@ -1,37 +1,92 @@
-use ggez::{Context, GameResult};
-use ggez::graphics::{self, DrawMode, DrawParam, Mesh, Rect, Text, TextFragment};
+use piston_window::{*, types::{Color, FontSize}};
+use std::{time::Duration, time::Instant};
 
-use crate::{terminal::{Terminal, TermState}, TEXT_OFFSET};
+use crate::{color::TermColor, FLASH_TIME, TEXT_OFFSET};
 
-pub fn draw_background(term: &mut Terminal, ctx: &mut Context) -> GameResult {
-    graphics::clear(ctx, term.bg_color);
+pub fn display_box(win_size: Size, bgc: Color, fgc: Color, lines: bool, context: Context, graphics: &mut G2d) {
+    rectangle(fgc, [10.0, 10.0, win_size.width - 20.0, win_size.height - 20.0], context.transform, graphics);
+    rectangle(bgc, [15.0, 15.0, win_size.width - 30.0, win_size.height - 30.0], context.transform, graphics);
 
-    let screen: Rect = graphics::screen_coordinates(ctx);
-    let text_box_bounds: Rect = Rect::new(
-        TEXT_OFFSET.x - 15.0,
-        TEXT_OFFSET.y - 10.0,
-        screen.w - ((TEXT_OFFSET.x * 2.0) - 30.0),
-        screen.h - ((TEXT_OFFSET.y * 2.0) - 20.0)
-    );
-    let text_box: Mesh = Mesh::new_rectangle(ctx, DrawMode::stroke(10.0), text_box_bounds, term.fg_color)?;
-    graphics::draw(ctx, &text_box, DrawParam::default())
+    if lines {
+        let line_color: Color = if fgc.brighter_than(bgc) {
+            [bgc[0] - 0.2, bgc[1] - 0.2, bgc[2] - 0.2, 0.5]
+        } else {
+            [bgc[0] + 0.15, bgc[1] + 0.15, bgc[2] + 0.15, 0.4]
+        };
+        
+        for i in 0..((win_size.height - 30.0) as i32 / 3) {
+            rectangle(line_color, [15.0, (i * 3) as f64 + 15.0, win_size.width - 30.0, 0.5], context.transform, graphics);
+        }
+    }
 }
 
-pub fn draw_text(term: &mut Terminal, ctx: &mut Context) -> GameResult {
-    let text = &term.message;
+pub fn display_message(message: &Vec<String>, glyphs: &mut Glyphs, font_size: FontSize, fgc: Color, context: Context, graphics: &mut G2d)  {
+    let x = TEXT_OFFSET.0;
+    let y = TEXT_OFFSET.1;
 
-    match term.state {
-        TermState::Typing => {
-            let mut new_text: Text = text.clone();
-            for (i, frag) in new_text.fragments_mut().iter_mut().enumerate() {
-                if i > term.counter as usize { *frag = TextFragment::default(); }
-            }
-            graphics::queue_text(ctx, &new_text, TEXT_OFFSET, None);
-        },
-        _ => {
-            graphics::queue_text(ctx, text, TEXT_OFFSET, None);
+    let mut y_offset: f64 = 0.0;
+    for line in message.iter() {
+        text::Text::new_color(fgc, font_size).draw(
+            line,
+            glyphs,
+            &context.draw_state,
+            context.transform.trans(x, y + y_offset),
+            graphics,
+        ).unwrap();
+
+        y_offset += font_size as f64;
+    }
+}
+
+pub fn display_input_marker(win_size: Size, glyphs: &mut Glyphs, font_size: FontSize, fgc: Color, context: Context, graphics: &mut G2d) {
+    let x = TEXT_OFFSET.0;
+    let y = (win_size.height - TEXT_OFFSET.1) + 20.0;
+
+    text::Text::new_color(fgc, font_size).draw(
+        "> ",
+        glyphs,
+        &context.draw_state,
+        context.transform.trans(x, y),
+        graphics,
+    ).unwrap();
+}
+
+pub fn display_input(win_size: Size, message: &str, glyphs: &mut Glyphs, font_size: FontSize, fgc: Color, context: Context, graphics: &mut G2d)  {
+    let x = TEXT_OFFSET.0 + 20.0;
+    let y = (win_size.height - TEXT_OFFSET.1) + 20.0;
+
+    text::Text::new_color(fgc, font_size).draw(
+        message,
+        glyphs,
+        &context.draw_state,
+        context.transform.trans(x, y),
+        graphics,
+    ).unwrap();
+}
+
+pub fn display_filter(win_size: Size, bgc: Color, lines: bool, context: Context, graphics: &mut G2d) {
+    if lines {
+        let line_color: Color = [bgc[0], bgc[1], bgc[2], 0.4];
+        
+        for i in 0..((win_size.height - 30.0) as i32 / 3) {
+            rectangle(line_color, [15.0, (i * 3) as f64 + 15.0, win_size.width - 30.0, 0.5], context.transform, graphics);
         }
     }
 
-    graphics::draw_queued_text(ctx, DrawParam::default(), None, graphics::FilterMode::Linear)
+    rectangle(bgc, [0.0, 0.0, win_size.width, 10.0], context.transform, graphics);
+    rectangle(bgc, [0.0, 0.0, 10.0, win_size.height], context.transform, graphics);
+    rectangle(bgc, [win_size.width - 10.0, 0.0, 10.0, win_size.height], context.transform, graphics);
+    rectangle(bgc, [0.0, win_size.height - 10.0, win_size.width, 10.0], context.transform, graphics);
+}
+
+pub fn check_flash(now: Instant, then: &mut Instant) -> bool {
+    let time_since: Duration = now.duration_since(*then);
+    if time_since > (FLASH_TIME * 2) {
+        *then = now;
+        true
+    } else if time_since > FLASH_TIME { 
+        true
+    } else {
+        false
+    }
 }

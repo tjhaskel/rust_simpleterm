@@ -1,149 +1,248 @@
-use cgmath::Point2;
-use ggez::conf::{WindowMode, WindowSetup};
-use ggez::{event, timer};
-use ggez::graphics::{self, Align, Color, Font, Scale, Text, TextFragment};
-use ggez::{Context, ContextBuilder, event::EventsLoop, GameResult};
-use std::{env, f32, path, thread};
+use piston_window::{*, types::{Color, FontSize}};
+use std::path::Path;
+use std::{thread, time::Instant};
 
-use crate::{command::{Command, CommandType}, draw::{draw_background, draw_text}, TEXT_OFFSET, TYPE_TIME};
+use crate::{draw::*, TYPE_TIME};
 
 pub struct Terminal {
-    queue: Vec<Command>,
-    pub message: Text,
-    pub input: Text,
-    font: Font,
-    font_size: Scale,
-    pub bg_color: Color,
-    pub fg_color: Color,
-    pub scan_lines: bool,
-    pub state: TermState,
-    pub counter: u32,
-    pub timer: i128,
-    pub goal: u32,
-}
-
-pub enum TermState {
-    Continue,
-    Typing,
-    WaitContinue,
-    WaitTimer,
-    WaitInput,
+    window: PistonWindow,
+    bg_color: Color,
+    fg_color: Color,
+    font_size: FontSize,
+    glyphs: Glyphs,
+    message: Vec<String>,
+    input: String,
+    scanlines: bool,
 }
 
 impl Terminal {
-    pub fn new(ctx: &mut Context, font_file: &str, font_size: f32, bgc: Color, fcg: Color) -> GameResult<Terminal> {
-        Ok( Terminal {
-            queue: Vec::new(),
-            message: Text::default(),
-            input: Text::default(),
-            font: Font::new(ctx, font_file)?,
-            font_size: Scale::uniform(font_size),
-            bg_color: bgc,
-            fg_color: fcg,
-            scan_lines: true,
-            state: TermState::Continue,
-            counter: 0,
-            timer: 0,
-            goal: 0,
-        })
+    pub fn new(title: &str, bg: Color, fg: Color, font: &str, font_size: u32) -> Terminal {
+        let mut new_window: PistonWindow = WindowSettings::new(title, [800, 600]).exit_on_esc(true).build().unwrap();
+        let resources: &Path = Path::new("resources");
+        let loaded_glyphs = new_window.load_font(resources.join(font)).unwrap();
+
+        Terminal {
+            window: new_window,
+            bg_color: bg,
+            fg_color: fg,
+            font_size: font_size,
+            glyphs: loaded_glyphs,
+            message: Vec::new(),
+            input: String::default(),
+            scanlines: true,
+        }
     }
 
-    pub fn start(&mut self, ctx: &mut Context, events: &mut EventsLoop) -> GameResult {
-        println!("{:?}", self.queue);
-        self.queue.reverse();
-        self.process_next_command(ctx);
-        event::run(ctx, events, self)
+    pub fn scan_lines(&mut self, enabled: bool) {
+        self.scanlines = enabled;
     }
 
-    pub fn ask(&mut self, text: &str) {
-        self.queue.push(Command::new(CommandType::Ask, String::from(text), None));
+    pub fn tell(&mut self, message: &str) {
+        self.new_message(message);
+        self.input = String::from("Press Enter to Continue");
+        self.wait_for_continue();
     }
 
-    pub fn show(&mut self, text: &str, time: f64) {
-        self.queue.push(Command::new(CommandType::Show, String::from(text), Some(time)));
+    pub fn ask(&mut self, message: &str) -> String {
+        self.new_message(message);
+        self.wait_for_input();
+        self.get_input()
     }
 
-    pub fn tell(&mut self, text: &str) {
-        self.queue.push(Command::new(CommandType::Tell, String::from(text), None));
+    fn new_message(&mut self, message: &str) {
+        self.message = message.split("\n").map(|x| String::from(x)).collect();
+        self.type_message();
     }
 
-    fn process_next_command(&mut self, ctx: &mut Context){
-        if let Some(command) = self.queue.pop() {
-            match command.command_type {
-                CommandType::Ask => {
-                    self.counter = 0;
-                    self.goal = command.text.len() as u32;
-                    self.process_message(command.text);
-                    self.input = Text::default();
-                    self.state = TermState::Typing;
+    fn get_input(&self) -> String {
+        self.input.clone()
+    }
+
+    fn type_message(&mut self) {
+        self.process_message();
+        let bgc: Color = self.bg_color;
+        let fgc: Color = self.fg_color;
+        let current_input: &str = &(self.input[..]);
+        let glyphs = &mut self.glyphs;
+        let font_size: FontSize = self.font_size;
+
+        let mut typed_message: Vec<String> = Vec::new();
+        let use_filter: bool = self.scanlines;
+
+        for (i, line) in self.message.iter().enumerate() {
+            typed_message.push(String::default());
+
+            let line_len: usize = line.len();
+            for j in 1..line_len {
+                typed_message[i] = String::from(&line[..=j]);
+                typed_message[i].push_str("[]");
+                if let Some(e) = self.window.next() {
+                    let win_size: Size = self.window.window.size();
+
+                    self.window.draw_2d(&e, |c, g, device| {
+                        clear(bgc, g);
+
+                        display_box(win_size, bgc, fgc, use_filter, c, g);
+                        display_message(&typed_message, glyphs, font_size, fgc, c, g);
+                        display_input(win_size, current_input, glyphs, font_size, fgc, c, g);
+                        display_filter(win_size, bgc, use_filter, c, g);
+                    
+                        glyphs.factory.encoder.flush(device);
+                    });
+                    thread::sleep(TYPE_TIME);
                 }
-                _ => {
+                typed_message[i].pop();
+                typed_message[i].pop();
+            }
+        }
+    }
 
+    fn wait_for_continue(&mut self) {
+        let mut ready: bool = false;
+
+        let bgc: Color = self.bg_color;
+        let fgc: Color = self.fg_color;
+
+        self.process_message();
+        let message: &Vec<String> = &self.message;
+        let current_input: &str = &(self.input);
+        let glyphs: &mut Glyphs = &mut self.glyphs;
+        let font_size: FontSize = self.font_size;
+        let use_filter: bool = self.scanlines;
+        
+        let mut start: Instant = Instant::now();
+        while let Some(e) = self.window.next() {
+            let win_size: Size = self.window.window.size();
+
+            e.button(|button_args| {
+                if let Button::Keyboard(key) = button_args.button {
+                    if button_args.state == ButtonState::Press {
+                        if key == Key::Return { ready = true; }
+                    }
+                }
+            });
+
+            if ready { break; }
+
+            let now: Instant = Instant::now();
+            self.window.draw_2d(&e, |c, g, device| {
+                clear(bgc, g);
+
+                display_box(win_size, bgc, fgc, use_filter, c, g);
+                display_message(message, glyphs, font_size, fgc, c, g);
+                display_input_marker(win_size, glyphs, font_size, fgc, c, g);
+                if check_flash(now, &mut start) { display_input(win_size, current_input, glyphs, font_size, fgc, c, g); }
+                display_filter(win_size, bgc, use_filter, c, g);
+            
+                glyphs.factory.encoder.flush(device);
+            });
+        }
+    }
+
+    fn wait_for_input(&mut self) {
+        let mut input_string: String = String::default();
+        let mut input_accepted: bool = false;
+
+        let bgc: Color = self.bg_color;
+        let fgc: Color = self.fg_color;
+
+        self.process_message();
+        let message: &Vec<String> = &self.message;
+        let glyphs: &mut Glyphs = &mut self.glyphs;
+        let font_size: FontSize = self.font_size;
+        let use_filter: bool = self.scanlines;
+        
+        let mut start: Instant = Instant::now();
+        while let Some(e) = self.window.next() {
+            let win_size: Size = self.window.window.size();
+
+            e.text(|text| input_string.push_str(text));
+            e.button(|button_args| {
+                if let Button::Keyboard(key) = button_args.button {
+                    if button_args.state == ButtonState::Press {
+                        if key == Key::Backspace { input_string.pop(); }
+                        if key == Key::Return && input_string != "" { input_accepted = true; }
+                    }
+                }
+            });
+
+            if input_accepted {
+                self.input = input_string.clone();
+                input_string = String::default();
+            }
+            
+            let now: Instant = Instant::now();
+            self.window.draw_2d(&e, |c, g, device| {
+                clear(bgc, g);
+
+                display_box(win_size, bgc, fgc, use_filter, c, g);
+                display_message(message, glyphs, font_size, fgc, c, g);
+                display_input_marker(win_size, glyphs, font_size, fgc, c, g);
+
+                if check_flash(now, &mut start) {
+                    input_string.push_str("[]");
+                    display_input(win_size, &input_string[..], glyphs, font_size, fgc, c, g);
+                    input_string.pop();
+                    input_string.pop();
+                } else {
+                    display_input(win_size, &input_string[..], glyphs, font_size, fgc, c, g);
+                }
+                
+                display_filter(win_size, bgc, use_filter, c, g);
+            
+                glyphs.factory.encoder.flush(device);
+            });
+
+            if input_accepted { break; }
+        }
+    }
+
+    fn process_message(&mut self) {
+        let max_chars: usize = self.get_max_characters();
+
+        let mut new_message_vec: Vec<String> = Vec::new();
+
+        for old_message in self.message.iter() {
+            let mut new_message: String = String::new();
+
+            for word in old_message.split_whitespace() {
+                if word.len() > max_chars {
+                    new_message_vec.append(&mut split_every_nth(word, max_chars));
+                } else if new_message.len() + word.len() > max_chars {
+                    new_message_vec.push(new_message);
+                    new_message = String::from(word);
+                } else {
+                    new_message = format!("{} {}", new_message, word);
                 }
             }
+
+            new_message_vec.push(new_message);
+        }
+
+        self.message = new_message_vec;
+    }
+
+    fn get_max_characters(&self) -> usize {
+        ((self.window.window.size().width / self.font_size as f64) * 2.0) as usize
+    }
+}
+
+fn split_every_nth(x: &str, n: usize) -> Vec<String> {
+    let mut result: Vec<String> = Vec::new();
+
+    let mut count: usize = 0;
+    let mut current_string: String = String::default();
+    for c in x.chars() {
+        if count >= n {
+            result.push(current_string);
+            current_string = format!("{}", c);
+            count = 1;
         } else {
-            event::quit(ctx);
+            current_string.push(c);
+            count += 1;
         }
     }
+    result.push(current_string);
 
-    fn process_message(&mut self, message: String) {
-        for c in message.chars() {
-            self.message.add(TextFragment::new(c));
-        }
-    }
-}
-
-impl event::EventHandler for Terminal {
-    fn update(&mut self, ctx: &mut Context) -> GameResult {
-        match self.state {
-            TermState::Typing => {
-                if self.counter > self.goal {
-                    println!("in continue");
-                    self.state = TermState::WaitContinue;
-                } else if self.timer <= 0 {
-                    println!("in timer");
-                    self.timer = TYPE_TIME.as_millis() as i128;
-                    self.counter += 1;
-                } else {
-                    println!("in waiting");
-                    self.timer -= timer::delta(ctx).as_millis() as i128;
-                }
-            },
-            _ => { () }
-        }
-        
-        const DESIRED_FPS: u32 = 60;
-        while timer::check_update_time(ctx, DESIRED_FPS) {}
-        Ok(())
-    }
-
-    fn draw(&mut self, ctx: &mut Context) -> GameResult {  
-        draw_background(self, ctx)?;
-        draw_text(self, ctx)?;
-        
-        graphics::present(ctx)?;
-        timer::yield_now();
-        Ok(())
-    }
-
-    fn resize_event(&mut self, ctx: &mut Context, width: f32, height: f32) {
-        self.message.set_bounds(Point2::new(width - (TEXT_OFFSET.x * 2.0), (height * 0.8) - (TEXT_OFFSET.y * 2.0)), Align::Left);
-        graphics::set_screen_coordinates(ctx, graphics::Rect::new(0.0, 0.0, width, height)).unwrap();
-    }
-}
-
-pub fn new_window(title: &str) -> GameResult<(Context, EventsLoop)> {
-    let resource_dir = if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
-        let mut path = path::PathBuf::from(manifest_dir);
-        path.push("resources");
-        path
-    } else {
-        path::PathBuf::from("./resources")
-    };
-
-    ContextBuilder::new(title, "simpleterm")
-        .window_setup(WindowSetup::default().title(title))
-        .window_mode(WindowMode::default().dimensions(800.0, 600.0).resizable(true))
-        .add_resource_path(resource_dir)
-        .build()
+    result
 }

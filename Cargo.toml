@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Trevan Haskell <dev@trevanhaskell.com>"]
 edition = "2018"
 
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 [dependencies]
-ggez = "0.5.1"
-cgmath = { version = "0.17", features = ["mint"]}
+piston_window = "0.109.0"
