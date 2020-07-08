@@ -1,6 +1,6 @@
 use piston_window::{*, types::{Color, FontSize}};
 use std::path::Path;
-use std::{thread, time::Instant};
+use std::{thread, time::{Duration, Instant}};
 
 use crate::{draw::*, TYPE_TIME};
 
@@ -54,6 +54,11 @@ impl Terminal {
         self.new_message(message);
         self.input = String::from("Press Enter to Continue");
         self.wait_for_continue();
+    }
+
+    pub fn show(&mut self, message: &str, time: Duration) {
+        self.new_message(message);
+        self.wait_for_timer(time);
     }
 
     pub fn ask(&mut self, message: &str) -> String {
@@ -111,13 +116,40 @@ impl Terminal {
         }
     }
 
+    fn wait_for_timer(&mut self, timer: Duration) {
+        let bgc: Color = self.bg_color;
+        let fgc: Color = self.fg_color;
+
+        let message: &Vec<String> = &self.message;
+        let glyphs: &mut Glyphs = &mut self.glyphs;
+        let font_size: FontSize = self.font_size;
+        let use_filter: bool = self.scanlines;
+        
+        let start: Instant = Instant::now();
+        while let Some(e) = self.window.next() {
+            let win_size: Size = self.window.window.size();
+
+            let now: Instant = Instant::now();
+            if now.duration_since(start) > timer { break; }
+
+            self.window.draw_2d(&e, |c, g, device| {
+                clear(bgc, g);
+
+                display_box(win_size, bgc, fgc, use_filter, c, g);
+                display_message(message, glyphs, font_size, fgc, c, g);
+                display_filter(win_size, bgc, use_filter, c, g);
+            
+                glyphs.factory.encoder.flush(device);
+            });
+        }
+    }
+
     fn wait_for_continue(&mut self) {
         let mut ready: bool = false;
 
         let bgc: Color = self.bg_color;
         let fgc: Color = self.fg_color;
 
-        
         let message: &Vec<String> = &self.message;
         let current_input: &str = &(self.input);
         let glyphs: &mut Glyphs = &mut self.glyphs;
