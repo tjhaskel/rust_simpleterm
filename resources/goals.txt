@@ -7,19 +7,19 @@ it can:
 
 2. prompt the user to continue (hit enter) - done
 
-3. prompt the user for input (strings or numbers) - strings: done, numbers: todo
+3. prompt the user for input (strings or numbers) - strings: done, numbers: dropped, user can parse string
 
 
 Other features:
 
 * pretty interface - done
 
-* colored text - todo
+* colored text - done
 
 * sound effects (optional) - dropped
 
 * flashing cursor - done
 
-* ascii-art easter eggs - todo
+* ascii-art easter eggs - done
 
 * saved history of text and responses - dropped

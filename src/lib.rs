@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+pub mod art;
 pub mod color;
 pub mod draw;
 pub mod terminal;

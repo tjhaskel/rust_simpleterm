@@ -8,6 +8,7 @@ pub struct Terminal {
     window: PistonWindow,
     bg_color: Color,
     fg_color: Color,
+    original_font: String,
     font_size: FontSize,
     glyphs: Glyphs,
     message: Vec<String>,
@@ -18,13 +19,13 @@ pub struct Terminal {
 impl Terminal {
     pub fn new(title: &str, bg: Color, fg: Color, font: &str, font_size: u32) -> Terminal {
         let mut new_window: PistonWindow = WindowSettings::new(title, [800, 600]).exit_on_esc(true).build().unwrap();
-        let resources: &Path = Path::new("resources");
-        let loaded_glyphs = new_window.load_font(resources.join(font)).unwrap();
+        let loaded_glyphs = load_font(&mut new_window, font);
 
         Terminal {
             window: new_window,
             bg_color: bg,
             fg_color: fg,
+            original_font: String::from(font),
             font_size: font_size,
             glyphs: loaded_glyphs,
             message: Vec::new(),
@@ -65,6 +66,19 @@ impl Terminal {
         self.new_message(message);
         self.wait_for_input();
         self.get_input()
+    }
+
+    pub fn display_art(&mut self, art: &str, time: Duration) {
+        let old_size: FontSize = self.font_size;
+
+        self.glyphs = load_font(&mut self.window, "LeagueMono-Regular.ttf");
+        self.font_size = 10;
+        self.message = art.split("\n").map(|x| String::from(x)).collect();
+        self.input = String::default();
+        self.wait_for_timer(time);
+
+        self.glyphs = load_font(&mut self.window, &self.original_font);
+        self.font_size = old_size;
     }
 
     fn new_message(&mut self, message: &str) {
@@ -272,6 +286,11 @@ impl Terminal {
     fn get_max_characters(&self) -> usize {
         ((self.window.window.size().width / self.font_size as f64) * 2.15) as usize
     }
+}
+
+fn load_font(window: &mut PistonWindow, name: &str) -> Glyphs {
+    let resources: &Path = Path::new("resources");
+    window.load_font(resources.join(name)).unwrap()
 }
 
 fn split_every_nth(x: &str, n: usize) -> Vec<String> {

@@ -34,7 +34,7 @@ pub fn display_message(message: &Vec<String>, glyphs: &mut Glyphs, font_size: Fo
             graphics,
         ).unwrap();
 
-        y_offset += font_size as f64;
+        y_offset += (font_size as f64) * 0.8;
     }
 }
 
