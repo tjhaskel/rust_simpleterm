@@ -16,9 +16,9 @@ fn main() {
     term.set_fgc(DARK_PURPLE);
     term.tell(&format!("You said: {}", input_recieved));
 
-    term.set_colors(DARK_GREY, LIGHT_BLUE);
+    term.set_colors(DARK_GREY, CRIMSON);
     term.display_art(MONA, Duration::from_secs(2));
 
-    term.set_fgc(CRIMSON);
+    term.set_fgc(LIGHT_BLUE);
     term.tell("Thus concludes the demo!");
 }

@@ -25,7 +25,7 @@ impl Terminal {
             bg_color: bg,
             fg_color: fg,
             original_font: String::from(font),
-            font_size: font_size,
+            font_size,
             glyphs: loaded_glyphs,
             message: Vec::new(),
             input: String::default(),
@@ -72,7 +72,7 @@ impl Terminal {
 
         self.glyphs = load_font(&mut self.window, "LeagueMono-Regular.ttf");
         self.font_size = 10;
-        self.message = art.split("\n").map(|x| String::from(x)).collect();
+        self.message = art.split('\n').map(String::from).collect();
         self.input = String::default();
         self.show_art(time);
 
@@ -81,7 +81,7 @@ impl Terminal {
     }
 
     fn new_message(&mut self, message: &str) {
-        self.message = message.split("\n").map(|x| String::from(x)).collect();
+        self.message = message.split('\n').map(String::from).collect();
         self.process_message();
         self.input = String::default();
         self.type_message();
@@ -203,9 +203,7 @@ impl Terminal {
 
             e.button(|button_args| {
                 if let Button::Keyboard(key) = button_args.button {
-                    if button_args.state == ButtonState::Press {
-                        if key == Key::Return { ready = true; }
-                    }
+                    if button_args.state == ButtonState::Press && key == Key::Return { ready = true; }
                 }
             });
 
@@ -300,7 +298,7 @@ impl Terminal {
                         let word_vec = split_word(word, max_chars - (message_len + 1), max_chars);
                         let mut word_iter = word_vec.iter();
                         new_message_vec.push(format!("{} {}", new_message, word_iter.next().unwrap()));
-                        while let Some(continued_word) = word_iter.next() {
+                        for continued_word in word_iter {
                             new_message_vec.push(continued_word.to_string());
                         }
                         new_message = String::default();
@@ -316,7 +314,7 @@ impl Terminal {
                     new_message = String::from(word);
                 }
             }
-            if new_message.len() > 0 { new_message_vec.push(new_message); }
+            if !new_message.is_empty() { new_message_vec.push(new_message); }
         }
         self.message = new_message_vec;
     }

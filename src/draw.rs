@@ -20,7 +20,7 @@ pub fn display_box(win_size: Size, bgc: Color, fgc: Color, lines: bool, context:
     }
 }
 
-pub fn display_message(message: &Vec<String>, glyphs: &mut Glyphs, font_size: FontSize, fgc: Color, context: Context, graphics: &mut G2d)  {
+pub fn display_message(message: &[String], glyphs: &mut Glyphs, font_size: FontSize, fgc: Color, context: Context, graphics: &mut G2d)  {
     let x = TEXT_OFFSET.0;
     let y = TEXT_OFFSET.1;
 
@@ -84,14 +84,12 @@ pub fn check_flash(now: Instant, then: &mut Instant) -> bool {
     if time_since > (FLASH_TIME * 2) {
         *then = now;
         true
-    } else if time_since > FLASH_TIME { 
-        true
     } else {
-        false
+        time_since > FLASH_TIME
     }
 }
 
-pub fn draw_art(win_size: Size, art: &Vec<String>, glyphs: &mut Glyphs, font_size: FontSize, fgc: Color, context: Context, graphics: &mut G2d) {
+pub fn draw_art(win_size: Size, art: &[String], glyphs: &mut Glyphs, font_size: FontSize, fgc: Color, context: Context, graphics: &mut G2d) {
     let (x, y): (f64, f64) = place_art(win_size, art, font_size);
 
     let mut y_offset: f64 = 0.0;
@@ -108,7 +106,7 @@ pub fn draw_art(win_size: Size, art: &Vec<String>, glyphs: &mut Glyphs, font_siz
     }
 }
 
-fn place_art(win_size: Size, art: &Vec<String>, font_size: FontSize) -> (f64, f64) {
+fn place_art(win_size: Size, art: &[String], font_size: FontSize) -> (f64, f64) {
     let mid_x: f64 = win_size.width / 2.0;
     let mid_y: f64 = win_size.height / 2.0;
 
