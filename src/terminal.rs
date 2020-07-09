@@ -301,7 +301,7 @@ impl Terminal {
                         for continued_word in word_iter {
                             new_message_vec.push(continued_word.to_string());
                         }
-                        new_message = String::default();
+                        new_message = new_message_vec.pop().unwrap();
                     } else {
                         new_message_vec.append(&mut split_word(word, max_chars, max_chars));
                     }

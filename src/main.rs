@@ -7,8 +7,8 @@ fn main() {
 
     term.display_art(GEO, Duration::from_secs(2));
     term.show("Welcome to Simpleterm!", Duration::from_secs(2));
-    term.tell("This is pretty cool! Here's a really long word to test stuff: 0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
-        \nThis should be on a new line!");
+    term.tell("Simpleterm lets you display text. It know's how to break up long sentences and words: 0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789. Neat!
+        \nThis is on a new line because it also supports \\n!");
 
     term.set_colors(OFF_WHITE, EMERALD);
     let input_recieved: String = term.ask("Enter some input: ");
