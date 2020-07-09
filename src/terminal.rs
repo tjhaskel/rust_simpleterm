@@ -1,8 +1,7 @@
 use piston_window::{*, types::{Color, FontSize}};
-use std::path::Path;
 use std::{thread, time::{Duration, Instant}};
 
-use crate::{draw::*, TYPE_TIME};
+use crate::{draw::*, text::*, TYPE_TIME};
 
 pub struct Terminal {
     window: PistonWindow,
@@ -75,7 +74,7 @@ impl Terminal {
         self.font_size = 10;
         self.message = art.split("\n").map(|x| String::from(x)).collect();
         self.input = String::default();
-        self.wait_for_timer(time);
+        self.show_art(time);
 
         self.glyphs = load_font(&mut self.window, &self.original_font);
         self.font_size = old_size;
@@ -127,6 +126,34 @@ impl Terminal {
                 typed_message[i].pop();
                 typed_message[i].pop();
             }
+        }
+    }
+
+    fn show_art(&mut self, timer: Duration) {
+        let bgc: Color = self.bg_color;
+        let fgc: Color = self.fg_color;
+
+        let art: &Vec<String> = &self.message;
+        let glyphs: &mut Glyphs = &mut self.glyphs;
+        let font_size: FontSize = self.font_size;
+        let use_filter: bool = self.scanlines;
+        
+        let start: Instant = Instant::now();
+        while let Some(e) = self.window.next() {
+            let win_size: Size = self.window.window.size();
+
+            let now: Instant = Instant::now();
+            if now.duration_since(start) > timer { break; }
+
+            self.window.draw_2d(&e, |c, g, device| {
+                clear(bgc, g);
+
+                display_box(win_size, bgc, fgc, use_filter, c, g);
+                draw_art(win_size, art, glyphs, font_size, fgc, c, g);
+                display_filter(win_size, bgc, use_filter, c, g);
+            
+                glyphs.factory.encoder.flush(device);
+            });
         }
     }
 
@@ -265,50 +292,36 @@ impl Terminal {
             let mut new_message: String = String::new();
 
             for word in old_message.split_whitespace() {
-                if word.len() > max_chars {
-                    new_message_vec.append(&mut split_every_nth(word, max_chars));
-                } else if new_message.len() + word.len() > max_chars {
+                let word_len: usize = word.len();
+                let message_len: usize = new_message.len();
+
+                if word_len > max_chars {
+                    if message_len > 0 {
+                        let word_vec = split_word(word, max_chars - (message_len + 1), max_chars);
+                        let mut word_iter = word_vec.iter();
+                        new_message_vec.push(format!("{} {}", new_message, word_iter.next().unwrap()));
+                        while let Some(continued_word) = word_iter.next() {
+                            new_message_vec.push(continued_word.to_string());
+                        }
+                        new_message = String::default();
+                    } else {
+                        new_message_vec.append(&mut split_word(word, max_chars, max_chars));
+                    }
+                } else if message_len + word_len > max_chars {
                     new_message_vec.push(new_message);
                     new_message = String::from(word);
-                } else if new_message.len() > 0 {
+                } else if message_len > 0 {
                     new_message = format!("{} {}", new_message, word);
                 } else {
                     new_message = String::from(word);
                 }
             }
-
-            new_message_vec.push(new_message);
+            if new_message.len() > 0 { new_message_vec.push(new_message); }
         }
-
         self.message = new_message_vec;
     }
 
     fn get_max_characters(&self) -> usize {
         ((self.window.window.size().width / self.font_size as f64) * 2.15) as usize
     }
-}
-
-fn load_font(window: &mut PistonWindow, name: &str) -> Glyphs {
-    let resources: &Path = Path::new("resources");
-    window.load_font(resources.join(name)).unwrap()
-}
-
-fn split_every_nth(x: &str, n: usize) -> Vec<String> {
-    let mut result: Vec<String> = Vec::new();
-
-    let mut count: usize = 0;
-    let mut current_string: String = String::default();
-    for c in x.chars() {
-        if count >= n {
-            result.push(current_string);
-            current_string = format!("{}", c);
-            count = 1;
-        } else {
-            current_string.push(c);
-            count += 1;
-        }
-    }
-    result.push(current_string);
-
-    result
 }

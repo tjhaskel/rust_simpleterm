@@ -1,7 +1,7 @@
 use piston_window::{*, types::{Color, FontSize}};
 use std::{time::Duration, time::Instant};
 
-use crate::{color::TermColor, FLASH_TIME, TEXT_OFFSET};
+use crate::{text::*, FLASH_TIME, TEXT_OFFSET};
 
 pub fn display_box(win_size: Size, bgc: Color, fgc: Color, lines: bool, context: Context, graphics: &mut G2d) {
     rectangle(fgc, [10.0, 10.0, win_size.width - 20.0, win_size.height - 20.0], context.transform, graphics);
@@ -89,4 +89,31 @@ pub fn check_flash(now: Instant, then: &mut Instant) -> bool {
     } else {
         false
     }
+}
+
+pub fn draw_art(win_size: Size, art: &Vec<String>, glyphs: &mut Glyphs, font_size: FontSize, fgc: Color, context: Context, graphics: &mut G2d) {
+    let (x, y): (f64, f64) = place_art(win_size, art, font_size);
+
+    let mut y_offset: f64 = 0.0;
+    for line in art.iter() {
+        text::Text::new_color(fgc, font_size).draw(
+            line,
+            glyphs,
+            &context.draw_state,
+            context.transform.trans(x, y + y_offset),
+            graphics,
+        ).unwrap();
+
+        y_offset += (font_size as f64) * 0.8;
+    }
+}
+
+fn place_art(win_size: Size, art: &Vec<String>, font_size: FontSize) -> (f64, f64) {
+    let mid_x: f64 = win_size.width / 2.0;
+    let mid_y: f64 = win_size.height / 2.0;
+
+    let art_mid_x: f64 = (art[0].len() as f64 / 2.0) * (font_size as f64 * 0.65);
+    let art_mid_y: f64 = (art.len() as f64 / 2.0) * (font_size as f64 * 0.8);
+    
+    (mid_x - art_mid_x, mid_y - art_mid_y)
 }
