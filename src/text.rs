@@ -1,11 +1,14 @@
 use piston_window::{*, types::Color};
 use std::path::Path;
 
-pub const DARK_GREY: Color = [0.16, 0.16, 0.16, 1.0];
-pub const DARK_PURPLE: Color = [0.4, 0.2, 0.7, 1.0];
-pub const LIGHT_BLUE: Color = [0.4, 0.8, 1.0, 1.0];
-pub const LIGHT_PURPLE: Color = [0.6, 0.4, 1.0, 1.0];
-pub const OFF_WHITE: Color = [0.98, 0.96, 0.94, 1.0];
+pub const CRIMSON: Color =      [0.86, 0.08, 0.24, 1.0];
+pub const DARK_GREY: Color =    [0.16, 0.16, 0.16, 1.0];
+pub const DARK_PURPLE: Color =  [0.4,  0.2,  0.7,  1.0];
+pub const EMERALD: Color =      [0.0,  0.79, 0.34, 1.0];
+pub const GOLD: Color =         [1.0,  0.65, 0.10, 1.0];
+pub const LIGHT_BLUE: Color =   [0.4,  0.8,  1.0,  1.0];
+pub const LIGHT_PURPLE: Color = [0.6,  0.4,  1.0,  1.0];
+pub const OFF_WHITE: Color =    [0.98, 0.96, 0.94, 1.0];
 
 pub trait TermColor {
     fn brightness(&self) -> f32;

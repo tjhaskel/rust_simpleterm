@@ -3,7 +3,7 @@ use std::time::Duration;
 use simpleterm::{art::*, text::*, terminal::Terminal};
 
 fn main() {
-    let mut term: Terminal = Terminal::new("simpleterm test", DARK_GREY, LIGHT_PURPLE, "LeagueSpartan-Regular.ttf", 32);
+    let mut term: Terminal = Terminal::new("simpleterm test", DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
 
     term.display_art(GEO, Duration::from_secs(2));
     term.show("Welcome to Simpleterm!", Duration::from_secs(2));
