@@ -13,12 +13,12 @@ fn main() {
     term.set_colors(OFF_WHITE, EMERALD);
     let input_recieved: String = term.ask("Enter some input: ");
 
-    term.set_colors(OFF_WHITE, DARK_PURPLE);
+    term.set_fgc(DARK_PURPLE);
     term.tell(&format!("You said: {}", input_recieved));
 
     term.set_colors(DARK_GREY, LIGHT_BLUE);
     term.display_art(MONA, Duration::from_secs(2));
 
-    term.set_colors(DARK_GREY, CRIMSON);
+    term.set_fgc(CRIMSON);
     term.tell("Thus concludes the demo!");
 }
