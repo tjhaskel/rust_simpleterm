@@ -8,7 +8,7 @@ You can also change the terminal's settings at any time, allowing you to create 
 ## Getting Started
 
 1. Run the example with "cargo run"
-2. Examine the example main.rs file and read up on the [Terminal functions](https://docs.rs/simpleterm/0.2.0/intfic/terminal/struct.Terminal.html)
+2. Examine the example main.rs file and read up on the [Terminal functions](https://docs.rs/simpleterm/0.2.0/simpleterm/terminal/struct.Terminal.html)
 3. Write you own script in main.rs and try it out!
 
 ## License
