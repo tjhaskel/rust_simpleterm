@@ -3,6 +3,8 @@ use std::{time::Duration, time::Instant};
 
 use crate::{text::*, FLASH_TIME, TEXT_OFFSET};
 
+/// Displays a box around the text of the terminal, using the terminal's current colors and size.
+/// Also draws scanlines on the terminal background.
 pub fn display_box(win_size: Size, bgc: Color, fgc: Color, lines: bool, context: Context, graphics: &mut G2d) {
     rectangle(fgc, [10.0, 10.0, win_size.width - 20.0, win_size.height - 20.0], context.transform, graphics);
     rectangle(bgc, [15.0, 15.0, win_size.width - 30.0, win_size.height - 30.0], context.transform, graphics);
@@ -20,6 +22,7 @@ pub fn display_box(win_size: Size, bgc: Color, fgc: Color, lines: bool, context:
     }
 }
 
+/// Draws text starting at the top of the terminal, using the terminal's current foreground color, font, and font size.
 pub fn display_message(message: &[String], glyphs: &mut Glyphs, font_size: FontSize, fgc: Color, context: Context, graphics: &mut G2d)  {
     let x = TEXT_OFFSET.0;
     let y = TEXT_OFFSET.1;
@@ -38,6 +41,7 @@ pub fn display_message(message: &[String], glyphs: &mut Glyphs, font_size: FontS
     }
 }
 
+/// Displays a marker before the input string at the bottom fo the terminal, using the terminal's current foreground color, font, and font size.
 pub fn display_input_marker(win_size: Size, glyphs: &mut Glyphs, font_size: FontSize, fgc: Color, context: Context, graphics: &mut G2d) {
     let x = TEXT_OFFSET.0;
     let y = (win_size.height - TEXT_OFFSET.1) + 20.0;
@@ -51,6 +55,7 @@ pub fn display_input_marker(win_size: Size, glyphs: &mut Glyphs, font_size: Font
     ).unwrap();
 }
 
+/// Displays the current input string at the bottom of the terminal, using the terminal's current foreground color, font, and font size.
 pub fn display_input(win_size: Size, message: &str, glyphs: &mut Glyphs, font_size: FontSize, fgc: Color, context: Context, graphics: &mut G2d)  {
     let x = TEXT_OFFSET.0 + 20.0;
     let y = (win_size.height - TEXT_OFFSET.1) + 20.0;
@@ -64,6 +69,7 @@ pub fn display_input(win_size: Size, message: &str, glyphs: &mut Glyphs, font_si
     ).unwrap();
 }
 
+/// Displays scanlines over the terminal text and a border around the terminal box, using the terminal's current size and background color.
 pub fn display_filter(win_size: Size, bgc: Color, lines: bool, context: Context, graphics: &mut G2d) {
     if lines {
         let line_color: Color = [bgc[0], bgc[1], bgc[2], 0.4];
@@ -79,6 +85,7 @@ pub fn display_filter(win_size: Size, bgc: Color, lines: bool, context: Context,
     rectangle(bgc, [0.0, win_size.height - 10.0, win_size.width, 10.0], context.transform, graphics);
 }
 
+/// Determines if enough time has passed since the last flash toggle. If so, save the current time and toggle the current flash state.
 pub fn check_flash(now: Instant, then: &mut Instant) -> bool {
     let time_since: Duration = now.duration_since(*then);
     if time_since > (FLASH_TIME * 2) {
@@ -89,6 +96,7 @@ pub fn check_flash(now: Instant, then: &mut Instant) -> bool {
     }
 }
 
+/// Draws art centered on the terminal. If the art is bigger than the terminal can display, you'll only see the center portion of it.
 pub fn draw_art(win_size: Size, art: &[String], glyphs: &mut Glyphs, font_size: FontSize, fgc: Color, context: Context, graphics: &mut G2d) {
     let (x, y): (f64, f64) = place_art(win_size, art, font_size);
 
@@ -106,6 +114,7 @@ pub fn draw_art(win_size: Size, art: &[String], glyphs: &mut Glyphs, font_size: 
     }
 }
 
+// Determines the top left corner of the given art in the given window, in order for the art to be centered.
 fn place_art(win_size: Size, art: &[String], font_size: FontSize) -> (f64, f64) {
     let mid_x: f64 = win_size.width / 2.0;
     let mid_y: f64 = win_size.height / 2.0;
