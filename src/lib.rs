@@ -1,10 +1,14 @@
 #![warn(missing_docs)]
 #![warn(missing_doc_code_examples)]
 
+//! ![Rust](https://github.com/tjhaskel/rust_simpleterm/workflows/Rust/badge.svg)
+//! 
 //! Simpleterm is a bespoke fake terminal created with piston_window.
 //! 
 //! It lets you create a window, send messages to it, grab input from the user, and display ascii art!
 //! You can also change the terminal's settings at any time, allowing you to create complicated scripts of actions.
+//! 
+//! ![splash](https://github.com/tjhaskel/rust_simpleterm/blob/master/resources/splash.png)
 //! 
 //! ## Getting Started
 //! 
