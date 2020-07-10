@@ -8,7 +8,7 @@
 //! It lets you create a window, send messages to it, grab input from the user, and display ascii art!
 //! You can also change the terminal's settings at any time, allowing you to create complicated scripts of actions.
 //! 
-//! ![splash](https://github.com/tjhaskel/rust_simpleterm/blob/master/resources/splash.png)
+//! ![splash](https://raw.githubusercontent.com/tjhaskel/rust_simpleterm/master/resources/splash.png)
 //! 
 //! ## Getting Started
 //! 
