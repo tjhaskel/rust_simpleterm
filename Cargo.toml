@@ -1,8 +1,12 @@
 [package]
+edition = "2018"
 name = "simpleterm"
 version = "0.2.0"
 authors = ["Trevan Haskell <dev@trevanhaskell.com>"]
-edition = "2018"
+description = "A bespoke fake terminal written in Rust"
+repository = "https://github.com/tjhaskel/rust_simpleterm"
+readme = "README.md"
+license = "MIT"
 
 [dependencies]
 piston_window = "0.109.0"
