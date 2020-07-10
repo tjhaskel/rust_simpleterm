@@ -26,7 +26,7 @@ pub struct Terminal {
 impl Terminal {
     /// Creates a new window with the given title, colors, and font info
     /// 
-    /// ```
+    /// ```no_run
     /// # use simpleterm::text::*;
     /// # use simpleterm::terminal::Terminal;
     /// let mut term: Terminal = Terminal::new("simpleterm test", DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
@@ -65,7 +65,7 @@ impl Terminal {
 
     /// Displays an ascii art string centered on the terminal. This uses 10pt font and a monospace font.
     /// 
-    /// ```
+    /// ```no_run
     /// # use std::time::Duration;
     /// # use simpleterm::{art::*, text::*};
     /// # use simpleterm::terminal::Terminal;
@@ -87,7 +87,7 @@ impl Terminal {
     
     /// Types out the given message, then waits for the given amount of time to continue.
     /// 
-    /// ```
+    /// ```no_run
     /// # use std::time::Duration;
     /// # use simpleterm::text::*;
     /// # use simpleterm::terminal::Terminal;
@@ -114,7 +114,8 @@ impl Terminal {
     }
 
     /// Closes the current window and creates a new one with the given (x, y) Size.
-    /// ```
+    /// 
+    /// ```no_run
     /// # use simpleterm::text::*;
     /// # use simpleterm::terminal::Terminal;
     /// # let mut term: Terminal = Terminal::new("simpleterm test", DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
@@ -126,7 +127,8 @@ impl Terminal {
     }
 
     /// Loads a new font from the given font filename and sets the given font size
-    /// ```
+    /// 
+    /// ```no_run
     /// # use simpleterm::text::*;
     /// # use simpleterm::terminal::Terminal;
     /// # let mut term: Terminal = Terminal::new("simpleterm test", DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
@@ -140,7 +142,7 @@ impl Terminal {
 
     /// Changes the terminal's background and foreground to the given colors. The change will be apparent in the next text command.
     /// 
-    /// ```
+    /// ```no_run
     /// # use simpleterm::text::*;
     /// # use simpleterm::terminal::Terminal;
     /// # let mut term: Terminal = Terminal::new("simpleterm test", DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
