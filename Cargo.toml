@@ -1,7 +1,7 @@
 [package]
 edition = "2018"
 name = "simpleterm"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Trevan Haskell <dev@trevanhaskell.com>"]
 description = "A bespoke fake terminal written in Rust"
 repository = "https://github.com/tjhaskel/rust_simpleterm"
