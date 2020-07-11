@@ -14,9 +14,9 @@ fn main() {
 
     // Change the font and colors, then ask a question and repeat back the input with new colors if we get some.
     term.set_font("LeagueMono-Regular.ttf", 24);
-    term.set_colors(OFF_WHITE, EMERALD);
+    term.set_colors(OFF_WHITE, DARK_PURPLE);
     if let Some(input_recieved) = term.ask("Enter some input: ") {
-        term.fg_color = DARK_PURPLE;
+        term.fg_color = EMERALD;
         term.tell(&format!("You said: {}", input_recieved));
     } else {
         println!("The window was interrupted before you could enter input!");
@@ -25,11 +25,18 @@ fn main() {
     // Make the art font size smaller, resize the window to better frame it, change the colors, and display MONA from art.rs.
     term.art_font_size = 9;
     term.resize((600, 800).into());
-    term.set_colors(DARK_GREY, CRIMSON);
-    term.display_art(MONA, Duration::from_secs(3));
+    term.set_colors(DARK_GREY, EMERALD);
+    term.display_art(MONA, Duration::from_millis(300));
+    term.fg_color = GOLD;
+    term.display_art(MONA, Duration::from_millis(300));
+    term.fg_color = CRIMSON;
+    term.display_art(MONA, Duration::from_millis(300));
+    term.fg_color = LIGHT_PURPLE;
+    term.display_art(MONA, Duration::from_millis(300));
+    term.fg_color = LIGHT_BLUE;
+    term.display_art(MONA, Duration::from_millis(300));
 
     // Change the font and colors and display some text. The window will close when the user hits enter.
     term.set_font("LeagueSpartan-Regular.ttf", 30);
-    term.fg_color = LIGHT_BLUE;
     term.tell("Thus concludes the demo!");
 }

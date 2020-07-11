@@ -23,6 +23,7 @@ pub struct Terminal {
     pub font_size: FontSize,
     /// The font size of art in our terminal.
     pub art_font_size: FontSize,
+    art_mode: bool,
     message: Vec<String>,
     input: String,
 }
@@ -51,6 +52,7 @@ impl Terminal {
             art_font: String::from("LeagueMono-Regular.ttf"),
             font_size,
             art_font_size: 10,
+            art_mode: false,
             message: Vec::new(),
             input: String::default(),
         }
@@ -67,6 +69,11 @@ impl Terminal {
     /// ```
     pub fn ask(&mut self, message: &str) -> Option<String> {
         if self.active {
+            if self.art_mode {
+                self.glyphs = load_font(&mut self.window, &self.font);
+                self.art_mode = false;
+            }
+
             self.new_message(message);
             self.wait_for_input();
             Some(self.input.clone())
@@ -86,13 +93,14 @@ impl Terminal {
     /// ```
     pub fn display_art(&mut self, art: &str, time: Duration) {
         if self.active {
-            self.glyphs = load_font(&mut self.window, &self.art_font);
+            if !self.art_mode {
+                self.glyphs = load_font(&mut self.window, &self.art_font);
+                self.art_mode = true;
+            }
 
             self.message = art.split('\n').map(String::from).collect();
             self.input = String::default();
             self.show_art(time);
-            
-            self.glyphs = load_font(&mut self.window, &self.font);
         }
     }
     
@@ -107,6 +115,11 @@ impl Terminal {
     /// ```
     pub fn show(&mut self, message: &str, time: Duration) {
         if self.active {
+            if self.art_mode {
+                self.glyphs = load_font(&mut self.window, &self.font);
+                self.art_mode = false;
+            }
+
             self.new_message(message);
             self.wait_for_timer(time);
         }
@@ -122,6 +135,11 @@ impl Terminal {
     /// ```
     pub fn tell(&mut self, message: &str) {
         if self.active {
+            if self.art_mode {
+                self.glyphs = load_font(&mut self.window, &self.font);
+                self.art_mode = false;
+            }
+
             self.new_message(message);
             self.input = String::from("Press Enter to Continue");
             self.wait_for_continue();
@@ -153,7 +171,8 @@ impl Terminal {
     /// ```
     pub fn set_font(&mut self, font: &str, size: FontSize) {
         if self.active {
-            self.glyphs = load_font(&mut self.window, font);
+            if !self.art_mode { self.glyphs = load_font(&mut self.window, font); }
+            self.font = String::from(font);
             self.font_size = size;
         }
     }
@@ -171,6 +190,7 @@ impl Terminal {
     /// ```
     pub fn set_art_font(&mut self, font: &str, size: FontSize) {
         if self.active {
+            if self.art_mode { self.glyphs = load_font(&mut self.window, font); }
             self.art_font = String::from(font);
             self.art_font_size = size;
         }
