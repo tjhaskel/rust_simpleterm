@@ -41,4 +41,4 @@ pub const TEXT_OFFSET: (f64, f64) = (25.0, 50.0);
 pub const FLASH_TIME: Duration = Duration::from_millis(500);
 
 /// How long should the terminal take to type a single character when displaying a message.
-pub const TYPE_TIME: Duration = Duration::from_millis(30);
+pub const TYPE_TIME: Duration = Duration::from_millis(20);

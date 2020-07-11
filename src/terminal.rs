@@ -6,21 +6,25 @@ use crate::{draw::*, text::*, TYPE_TIME};
 /// A terminal stores a PistonWindow, background and foreground colors,
 /// a font, fontsize, and glyph cache, and the current message and input strings.
 pub struct Terminal {
-    /// The window that displays our terminal. See [PistonWindow](https://docs.rs/piston_window/0.109.0/piston_window/).
+    title: String,
+    active: bool,
+    /// The window that displays our terminal.
     pub window: PistonWindow,
     /// The background color of our terminal.
     pub bg_color: Color,
     /// The foreground color of our terminal.
     pub fg_color: Color,
-    title: String,
-    original_font: String,
-    /// The font size of our terminal.
-    pub font_size: FontSize,
-    glyphs: Glyphs,
-    message: Vec<String>,
-    input: String,
     /// Whether or not to use scanlines
     pub scanlines: bool,
+    glyphs: Glyphs,
+    font: String,
+    art_font: String,
+    /// The font size of normal text in our terminal.
+    pub font_size: FontSize,
+    /// The font size of art in our terminal.
+    pub art_font_size: FontSize,
+    message: Vec<String>,
+    input: String,
 }
 
 impl Terminal {
@@ -29,38 +33,46 @@ impl Terminal {
     /// ```no_run
     /// # use simpleterm::text::*;
     /// # use simpleterm::terminal::Terminal;
-    /// let mut term: Terminal = Terminal::new("simpleterm test", DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
+    /// let mut term: Terminal = Terminal::new("simpleterm test", (800, 600), DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
     /// ```
-    pub fn new(title: &str, bg: Color, fg: Color, font: &str, font_size: u32) -> Terminal {
-        let mut new_window: PistonWindow = WindowSettings::new(title, [800, 600]).exit_on_esc(true).build().unwrap();
+    pub fn new(title: &str, size: (u32, u32), bg: Color, fg: Color, font: &str, font_size: u32) -> Terminal {
+        let mut new_window: PistonWindow = WindowSettings::new(title, size).exit_on_esc(true).build().unwrap();
         let loaded_glyphs = load_font(&mut new_window, font);
 
         Terminal {
+            title: String::from(title),
+            active: true,
             window: new_window,
             bg_color: bg,
             fg_color: fg,
-            title: String::from(title),
-            original_font: String::from(font),
-            font_size,
+            scanlines: true,
             glyphs: loaded_glyphs,
+            font: String::from(font),
+            art_font: String::from("LeagueMono-Regular.ttf"),
+            font_size,
+            art_font_size: 10,
             message: Vec::new(),
             input: String::default(),
-            scanlines: true,
         }
     }
 
-    /// Types out the given message, then waits for the user to type something and returns that input string.
+    /// Types out the given message, then waits for the user to type something and returns Some(input string).
+    /// If the window is closed before input can be returned, returns None.
     /// 
     /// ```no_run
     /// # use simpleterm::text::*;
     /// # use simpleterm::terminal::Terminal;
-    /// # let mut term: Terminal = Terminal::new("simpleterm test", DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
-    /// let user_input: String = term.ask("This will wait for the user enter input!");
+    /// # let mut term: Terminal = Terminal::new("simpleterm test", (800, 600), DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
+    /// let user_input: String = term.ask("This will wait for the user enter input!").unwrap();
     /// ```
-    pub fn ask(&mut self, message: &str) -> String {
-        self.new_message(message);
-        self.wait_for_input();
-        self.input.clone()
+    pub fn ask(&mut self, message: &str) -> Option<String> {
+        if self.active {
+            self.new_message(message);
+            self.wait_for_input();
+            Some(self.input.clone())
+        } else {
+            None
+        }
     }
 
     /// Displays an ascii art string centered on the terminal. This uses 10pt font and a monospace font.
@@ -69,20 +81,19 @@ impl Terminal {
     /// # use std::time::Duration;
     /// # use simpleterm::{art::*, text::*};
     /// # use simpleterm::terminal::Terminal;
-    /// # let mut term: Terminal = Terminal::new("simpleterm test", DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
+    /// # let mut term: Terminal = Terminal::new("simpleterm test", (800, 600), DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
     /// term.display_art(GEO, Duration::from_secs(2));
     /// ```
     pub fn display_art(&mut self, art: &str, time: Duration) {
-        let old_size: FontSize = self.font_size;
+        if self.active {
+            self.glyphs = load_font(&mut self.window, &self.art_font);
 
-        self.glyphs = load_font(&mut self.window, "LeagueMono-Regular.ttf");
-        self.font_size = 10;
-        self.message = art.split('\n').map(String::from).collect();
-        self.input = String::default();
-        self.show_art(time);
-
-        self.glyphs = load_font(&mut self.window, &self.original_font);
-        self.font_size = old_size;
+            self.message = art.split('\n').map(String::from).collect();
+            self.input = String::default();
+            self.show_art(time);
+            
+            self.glyphs = load_font(&mut self.window, &self.font);
+        }
     }
     
     /// Types out the given message, then waits for the given amount of time to continue.
@@ -91,12 +102,14 @@ impl Terminal {
     /// # use std::time::Duration;
     /// # use simpleterm::text::*;
     /// # use simpleterm::terminal::Terminal;
-    /// # let mut term: Terminal = Terminal::new("simpleterm test", DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
+    /// # let mut term: Terminal = Terminal::new("simpleterm test", (800, 600), DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
     /// term.show("This will wait for 1 second!", Duration::from_secs(1));
     /// ```
     pub fn show(&mut self, message: &str, time: Duration) {
-        self.new_message(message);
-        self.wait_for_timer(time);
+        if self.active {
+            self.new_message(message);
+            self.wait_for_timer(time);
+        }
     }
 
     /// Types out the given message, then waits for the user to press Enter to continue.
@@ -104,13 +117,15 @@ impl Terminal {
     /// ```no_run
     /// # use simpleterm::text::*;
     /// # use simpleterm::terminal::Terminal;
-    /// # let mut term: Terminal = Terminal::new("simpleterm test", DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
+    /// # let mut term: Terminal = Terminal::new("simpleterm test", (800, 600), DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
     /// term.tell("This will wait for the user to hit enter!");
     /// ```
     pub fn tell(&mut self, message: &str) {
-        self.new_message(message);
-        self.input = String::from("Press Enter to Continue");
-        self.wait_for_continue();
+        if self.active {
+            self.new_message(message);
+            self.input = String::from("Press Enter to Continue");
+            self.wait_for_continue();
+        }
     }
 
     /// Closes the current window and creates a new one with the given (x, y) Size.
@@ -118,12 +133,14 @@ impl Terminal {
     /// ```no_run
     /// # use simpleterm::text::*;
     /// # use simpleterm::terminal::Terminal;
-    /// # let mut term: Terminal = Terminal::new("simpleterm test", DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
+    /// # let mut term: Terminal = Terminal::new("simpleterm test", (800, 600), DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
     /// term.resize((800, 600).into());
     /// ```
     pub fn resize(&mut self, new_size: Size) {
-        let new_window: PistonWindow = WindowSettings::new(self.title.clone(), new_size).exit_on_esc(true).build().unwrap();
-        self.window = new_window;
+        if self.active {
+            let new_window: PistonWindow = WindowSettings::new(self.title.clone(), new_size).exit_on_esc(true).build().unwrap();
+            self.window = new_window;
+        }
     }
 
     /// Loads a new font from the given font filename and sets the given font size
@@ -131,13 +148,32 @@ impl Terminal {
     /// ```no_run
     /// # use simpleterm::text::*;
     /// # use simpleterm::terminal::Terminal;
-    /// # let mut term: Terminal = Terminal::new("simpleterm test", DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
-    /// term.set_font("LeagueMono-Regular.ttf", 24);
+    /// # let mut term: Terminal = Terminal::new("simpleterm test", (800, 600), DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
+    /// term.set_font("LeagueSpartan-Regular.ttf", 24);
     /// ```
     pub fn set_font(&mut self, font: &str, size: FontSize) {
-        self.glyphs = load_font(&mut self.window, font);
-        self.original_font = String::from(font);
-        self.font_size = size;
+        if self.active {
+            self.glyphs = load_font(&mut self.window, font);
+            self.font_size = size;
+        }
+    }
+
+    /// Loads a new art font from the given font filename and sets the given font size.
+    /// You probably want to use a mono-space font here, and a small size.
+    /// 
+    /// The default is LeagueMono-Regular.ttf at 10pt.
+    /// 
+    /// ```no_run
+    /// # use simpleterm::text::*;
+    /// # use simpleterm::terminal::Terminal;
+    /// # let mut term: Terminal = Terminal::new("simpleterm test", (800, 600), DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
+    /// term.set_art_font("LeagueMono-Regular.ttf", 10);
+    /// ```
+    pub fn set_art_font(&mut self, font: &str, size: FontSize) {
+        if self.active {
+            self.art_font = String::from(font);
+            self.art_font_size = size;
+        }
     }
 
     /// Changes the terminal's background and foreground to the given colors. The change will be apparent in the next text command.
@@ -145,7 +181,7 @@ impl Terminal {
     /// ```no_run
     /// # use simpleterm::text::*;
     /// # use simpleterm::terminal::Terminal;
-    /// # let mut term: Terminal = Terminal::new("simpleterm test", DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
+    /// # let mut term: Terminal = Terminal::new("simpleterm test", (800, 600), DARK_GREY, GOLD, "LeagueSpartan-Regular.ttf", 32);
     /// term.set_colors(DARK_GREY, CRIMSON);
     /// ```
     pub fn set_colors(&mut self, bgc: Color, fgc: Color) {
@@ -160,11 +196,14 @@ impl Terminal {
 
         let art: &Vec<String> = &self.message;
         let glyphs: &mut Glyphs = &mut self.glyphs;
-        let font_size: FontSize = self.font_size;
+        let font_size: FontSize = self.art_font_size;
         let use_filter: bool = self.scanlines;
         
         let start: Instant = Instant::now();
+        let mut active: bool = self.active;
         while let Some(e) = self.window.next() {
+            e.close(|_| { active = false; });
+
             let win_size: Size = self.window.window.size();
 
             let now: Instant = Instant::now();
@@ -180,6 +219,7 @@ impl Terminal {
                 glyphs.factory.encoder.flush(device);
             });
         }
+        self.active = active;
     }
 
     // Types a message one character at a time, waiting TYPE_TIME between each character.
@@ -193,6 +233,7 @@ impl Terminal {
         let mut typed_message: Vec<String> = Vec::new();
         let use_filter: bool = self.scanlines;
 
+        let mut active: bool = self.active;
         for (i, line) in self.message.iter().enumerate() {
             typed_message.push(String::default());
 
@@ -201,6 +242,8 @@ impl Terminal {
                 typed_message[i] = String::from(&line[..=j]);
                 typed_message[i].push_str("[]");
                 if let Some(e) = self.window.next() {
+                    e.close(|_| { active = false; });
+
                     let win_size: Size = self.window.window.size();
 
                     self.window.draw_2d(&e, |c, g, device| {
@@ -219,6 +262,7 @@ impl Terminal {
                 typed_message[i].pop();
             }
         }
+        self.active = active;
     }
 
     // Displays the current terminal until the user presses Enter.
@@ -235,7 +279,10 @@ impl Terminal {
         let use_filter: bool = self.scanlines;
         
         let mut start: Instant = Instant::now();
+        let mut active: bool = self.active;
         while let Some(e) = self.window.next() {
+            e.close(|_| { active = false; });
+
             let win_size: Size = self.window.window.size();
 
             e.button(|button_args| {
@@ -259,6 +306,7 @@ impl Terminal {
                 glyphs.factory.encoder.flush(device);
             });
         }
+        self.active = active;
     }
 
     // Displays the current terminal until the user submits some input.
@@ -275,9 +323,12 @@ impl Terminal {
         let use_filter: bool = self.scanlines;
         
         let mut start: Instant = Instant::now();
+        let mut active: bool = self.active;
         while let Some(e) = self.window.next() {
-            let win_size: Size = self.window.window.size();
+            e.close(|_| { active = false; });
 
+            let win_size: Size = self.window.window.size();
+            
             e.text(|text| input_string.push_str(text));
             e.button(|button_args| {
                 if let Button::Keyboard(key) = button_args.button {
@@ -317,6 +368,7 @@ impl Terminal {
 
             if input_accepted { break; }
         }
+        self.active = active;
     }
 
     // Displays an the current terminal until the timer runs out.
@@ -330,7 +382,10 @@ impl Terminal {
         let use_filter: bool = self.scanlines;
         
         let start: Instant = Instant::now();
+        let mut active: bool = self.active;
         while let Some(e) = self.window.next() {
+            e.close(|_| { active = false; });
+
             let win_size: Size = self.window.window.size();
 
             let now: Instant = Instant::now();
@@ -346,6 +401,7 @@ impl Terminal {
                 glyphs.factory.encoder.flush(device);
             });
         }
+        self.active = active;
     }
 
     // Processes a new message and types it out.
