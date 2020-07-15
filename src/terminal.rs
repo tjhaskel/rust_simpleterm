@@ -69,11 +69,7 @@ impl Terminal {
     /// ```
     pub fn ask(&mut self, message: &str) -> Option<String> {
         if self.active {
-            if self.art_mode {
-                self.glyphs = load_font(&mut self.window, &self.font);
-                self.art_mode = false;
-            }
-
+            self.check_text_mode();
             self.new_message(message);
             self.wait_for_input();
             Some(self.input.clone())
@@ -93,11 +89,7 @@ impl Terminal {
     /// ```
     pub fn display_art(&mut self, art: &str, time: Duration) {
         if self.active {
-            if !self.art_mode {
-                self.glyphs = load_font(&mut self.window, &self.art_font);
-                self.art_mode = true;
-            }
-
+            self.check_art_mode();
             self.message = art.split('\n').map(String::from).collect();
             self.input = String::default();
             self.show_art(time);
@@ -115,11 +107,7 @@ impl Terminal {
     /// ```
     pub fn show(&mut self, message: &str, time: Duration) {
         if self.active {
-            if self.art_mode {
-                self.glyphs = load_font(&mut self.window, &self.font);
-                self.art_mode = false;
-            }
-
+            self.check_text_mode();
             self.new_message(message);
             self.wait_for_timer(time);
         }
@@ -135,11 +123,7 @@ impl Terminal {
     /// ```
     pub fn tell(&mut self, message: &str) {
         if self.active {
-            if self.art_mode {
-                self.glyphs = load_font(&mut self.window, &self.font);
-                self.art_mode = false;
-            }
-
+            self.check_text_mode();
             self.new_message(message);
             self.input = String::from("Press Enter to Continue");
             self.wait_for_continue();
@@ -207,6 +191,20 @@ impl Terminal {
     pub fn set_colors(&mut self, bgc: Color, fgc: Color) {
         self.bg_color = bgc;
         self.fg_color = fgc;
+    }
+
+    fn check_art_mode(&mut self) {
+        if !self.art_mode {
+            self.glyphs = load_font(&mut self.window, &self.art_font);
+            self.art_mode = true;
+        }
+    }
+
+    fn check_text_mode(&mut self) {
+        if self.art_mode {
+            self.glyphs = load_font(&mut self.window, &self.font);
+            self.art_mode = false;
+        }
     }
 
     // Displays an art string along with the rest of the terminal.
